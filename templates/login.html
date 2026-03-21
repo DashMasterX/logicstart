@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - LogicStart IDE</title>
+<style>
+body { margin:0; font-family:'Segoe UI',sans-serif; background:#181818; color:#e0e0e0; display:flex; justify-content:center; align-items:center; height:100vh; }
+.login-box { background:#222; padding:40px; border-radius:10px; text-align:center; width:320px; }
+h2 { margin-bottom:20px; }
+.input-field { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #555; background:#1e1e1e; color:#e0e0e0; }
+.btn { width:100%; background:#3a78d7; color:white; border:none; padding:12px; cursor:pointer; font-size:1em; border-radius:5px; margin-top:10px; transition:.2s; }
+.btn:hover { background:#2b5ea0; }
+.oauth-btn { background:#ff5555; margin-top:5px; }
+.oauth-btn:hover { background:#cc4444; }
+</style>
+</head>
+<body>
+<div class="login-box">
+    <h2>Entrar na LogicStart</h2>
+    <input class="input-field" type="email" placeholder="Email" id="email">
+    <input class="input-field" type="password" placeholder="Senha" id="senha">
+    <button class="btn" onclick="loginEmail()">Entrar</button>
+    <button class="btn oauth-btn" onclick="loginGoogle()">Entrar com Google</button>
+</div>
+<script>
+function loginEmail() {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+    if(!email||!senha){alert("Preencha todos os campos!"); return;}
+    fetch("/login/email",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email,senha})})
+    .then(res=>res.json()).then(data=>{
+        if(data.success){ window.location.href="/ide"; }
+        else alert(data.error);
+    });
+}
+function loginGoogle(){ window.location.href="/login/google"; }
+</script>
+</body>
+</html>
