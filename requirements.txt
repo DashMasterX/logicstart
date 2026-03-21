@@ -1,2 +1,4 @@
-Flask
+flask
 flask-cors
+flask-dance
+pymongo
