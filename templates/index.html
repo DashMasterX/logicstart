@@ -1,28 +1,103 @@
 <!DOCTYPE html>
-<html lang="pt-br">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>🚀 LogicStart IDE</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <title>LogicStart IDE</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+    <style>
+        body { margin:0; font-family: 'Roboto Mono', monospace; background:#0a0f1c; color:#e0e0e0; }
+        header { background:#1c2536; padding:15px; display:flex; justify-content:space-between; align-items:center; }
+        h1 { margin:0; color:#4fc3f7; }
+        #editor { width: 90%; height:300px; margin:20px auto; background:#141c2b; color:#cfd8dc; padding:10px; border-radius:10px; font-size:16px; resize:none; }
+        #output { width: 90%; height:200px; margin:10px auto; background:#101522; color:#a5d6a7; padding:10px; border-radius:10px; font-size:16px; overflow-y:auto; white-space: pre-wrap; }
+        .btn { padding:10px 20px; margin:5px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+        #run { background:#4fc3f7; color:#000; }
+        #clear { background:#ef5350; color:#fff; }
+        #copy { background:#cfd8dc; color:#000; }
+        #save { background:#ffca28; color:#000; }
+        #email { width:300px; padding:5px; border-radius:5px; border:none; margin-right:5px; }
+        footer { text-align:center; padding:10px; color:#607d8b; }
+    </style>
 </head>
 <body>
 <header>
     <h1>🚀 LogicStart IDE</h1>
+    <div>
+        <input type="email" id="email" placeholder="Seu email para salvar">
+        <button class="btn" id="save">💾 Salvar Código</button>
+    </div>
 </header>
 
-<main>
-    <div id="editor-container" class="fade-in">
-        <textarea id="editor" placeholder="Digite seu código aqui..."></textarea>
-        <button id="run">▶ Executar</button>
-    </div>
+<textarea id="editor" placeholder="Digite seu código LogicStart..."></textarea>
 
-    <div id="output-container" class="fade-out">
-        <pre id="output">Resultado aparecerá aqui...</pre>
-        <button id="back">🔙 Voltar</button>
-    </div>
-</main>
+<div style="text-align:center;">
+    <button class="btn" id="run">▶ Executar</button>
+    <button class="btn" id="clear">🧹 Limpar</button>
+    <button class="btn" id="copy">📋 Copiar Resultado</button>
+</div>
 
-<script src="{{ url_for('static', filename='js/main.js') }}"></script>
+<div id="output" placeholder="Resultado...">Resultado aparecerá aqui</div>
+
+<footer>LogicStart IDE v1.0 — Profissional & Seguro</footer>
+
+<script>
+const editor = document.getElementById('editor');
+const output = document.getElementById('output');
+const emailInput = document.getElementById('email');
+
+document.getElementById('run').addEventListener('click', async () => {
+    output.textContent = "⏳ Executando...";
+    const codigo = editor.value;
+
+    try {
+        const res = await fetch('/run', {
+            method:'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ code: codigo })
+        });
+        const data = await res.json();
+        if(data.success){
+            output.textContent = data.result + `\n\n⏱ ${data.time}s`;
+        }else{
+            output.textContent = `❌ ${data.error}`;
+        }
+    } catch(e){
+        output.textContent = `💥 Erro: ${e}`;
+    }
+});
+
+document.getElementById('clear').addEventListener('click', () => {
+    editor.value = '';
+    output.textContent = '';
+});
+
+document.getElementById('copy').addEventListener('click', () => {
+    navigator.clipboard.writeText(output.textContent);
+});
+
+document.getElementById('save').addEventListener('click', async () => {
+    const email = emailInput.value.trim();
+    if(!email){
+        alert("📧 Digite um email válido");
+        return;
+    }
+    const codigo = editor.value;
+    try{
+        const res = await fetch('/save_code', {
+            method:'POST',
+            headers:{ 'Content-Type':'application/json' },
+            body: JSON.stringify({ email, code: codigo })
+        });
+        const data = await res.json();
+        if(data.success){
+            alert("💾 Código salvo com sucesso!");
+        }else{
+            alert("❌ Falha ao salvar: " + data.error);
+        }
+    }catch(e){
+        alert("💥 Erro ao salvar: " + e);
+    }
+});
+</script>
 </body>
 </html>
