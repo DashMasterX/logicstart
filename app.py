@@ -9,39 +9,52 @@ import traceback
 import time
 import os
 import logging
+from functools import wraps
 
 # =========================
-# CONFIG APP
+# CONFIGURAÇÃO APP
 # =========================
 app = Flask(__name__)
-
-# Logging profissional
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("LogicStart")
-
-# Segurança
-MAX_CODE_SIZE = 5000
-
+MAX_CODE_SIZE = 5000  # Limite de caracteres
 
 # =========================
-# MIDDLEWARE (LOG REQUEST)
+# LOGGING PROFISSIONAL
+# =========================
+logger = logging.getLogger("LogicStart")
+logger.setLevel(logging.INFO)
+formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
+
+console_handler = logging.StreamHandler(sys.stdout)
+console_handler.setFormatter(formatter)
+logger.addHandler(console_handler)
+
+# =========================
+# MIDDLEWARE
 # =========================
 @app.before_request
 def log_request():
-    logger.info(f"[REQ] {request.method} {request.path}")
+    logger.info(f"[REQ] {request.method} {request.path} from {request.remote_addr}")
 
+def execution_timer(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+        start_time = time.time()
+        response = func(*args, **kwargs)
+        exec_time = round(time.time() - start_time, 4)
+        logger.info(f"[EXEC TIME] {request.path} -> {exec_time}s")
+        return response
+    return wrapper
 
 # =========================
 # ROTAS
 # =========================
-
 @app.route("/")
 def home():
     try:
         return render_template("index.html")
-    except Exception:
+    except Exception as e:
+        logger.error(f"Falha ao renderizar index.html: {e}")
         return "LogicStart ONLINE 🚀"
-
 
 @app.route("/health")
 def health():
@@ -51,14 +64,11 @@ def health():
         "time": time.time()
     })
 
-
 @app.route("/run", methods=["POST"])
+@execution_timer
 def run_code():
-    start_time = time.time()
-
     try:
         data = request.get_json()
-
         if not data or "code" not in data:
             return error_response("Código não enviado")
 
@@ -69,71 +79,60 @@ def run_code():
         # =========================
         if len(codigo) > MAX_CODE_SIZE:
             return error_response("Código muito grande")
-
         if not Security().verificar(codigo):
             return error_response("Código bloqueado por segurança")
 
         # =========================
-        # EXECUÇÃO SEGURA
+        # EXECUÇÃO ISOLADA
         # =========================
         buffer = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = buffer
-
         try:
             logic = LogicStart(codigo)
             logic.executar()
-            output = buffer.getvalue()
-
         finally:
             sys.stdout = old_stdout
 
-        execution_time = round(time.time() - start_time, 4)
-
-        logger.info(f"[EXEC] Tempo: {execution_time}s")
-
+        output = buffer.getvalue() or "✔ Executado com sucesso"
         return jsonify({
             "success": True,
-            "result": output if output else "✔ Executado com sucesso",
-            "time": execution_time
+            "result": output
         })
 
     except LogicStartErro as e:
         logger.warning(f"[LOGIC ERROR] {e}")
         return error_response(str(e))
-
     except Exception:
         erro = traceback.format_exc()
-        logger.error(f"[CRASH]\n{erro}")
+        logger.error(f"[CRASH] {erro}")
         return error_response("Erro interno", debug=erro)
 
-
 # =========================
-# ERRO PADRÃO
+# FUNÇÕES AUXILIARES
 # =========================
 def error_response(msg, debug=None):
     return jsonify({
         "success": False,
         "error": msg,
         "debug": debug
-    })
-
+    }), 400
 
 # =========================
-# HANDLER GLOBAL
+# HANDLERS GLOBAIS
 # =========================
 @app.errorhandler(404)
 def not_found(e):
-    return jsonify({"error": "Rota não encontrada"}), 404
-
+    logger.warning(f"404: {request.path}")
+    return jsonify({"success": False, "error": "Rota não encontrada"}), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    return jsonify({"error": "Erro interno do servidor"}), 500
-
+    logger.critical(f"500: {request.path} - {e}")
+    return jsonify({"success": False, "error": "Erro interno do servidor"}), 500
 
 # =========================
-# START (COMPATÍVEL CLOUD)
+# START CLOUD/LOCAL
 # =========================
 if __name__ == "__main__":
     try:
