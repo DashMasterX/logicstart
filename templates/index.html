@@ -1,116 +1,203 @@
+<!-- templates/index.html - Versão Animada Elite -->
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>LogicStart IDE</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <title>🚀 LogicStart IDE Steam Elite</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <style>
-        body {
-            margin: 0;
-            background: #0f172a;
-            color: #e2e8f0;
-            font-family: Arial;
-        }
+  <!-- CodeMirror 6 -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/codemirror.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.14/mode/python/python.min.js"></script>
 
-        header {
-            background: #020617;
-            padding: 15px;
-            font-size: 20px;
-            text-align: center;
-            color: #38bdf8;
-            border-bottom: 1px solid #1e293b;
-        }
+  <!-- Estilos -->
+  <style>
+    body {
+      margin: 0;
+      font-family: 'Roboto', sans-serif;
+      background: linear-gradient(135deg, #0B0F1A, #1A1F2C);
+      color: #EEE;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      transition: background 0.3s;
+    }
 
-        .container {
-            display: flex;
-            height: 90vh;
-        }
+    header {
+      background: #141A2B;
+      padding: 12px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.6);
+    }
 
-        textarea {
-            width: 50%;
-            padding: 15px;
-            background: #020617;
-            color: #22c55e;
-            border: none;
-            outline: none;
-            font-family: monospace;
-            font-size: 14px;
-        }
+    header h1 {
+      margin: 0;
+      font-size: 1.6rem;
+      color: #4FC3F7;
+      letter-spacing: 1px;
+    }
 
-        .output {
-            width: 50%;
-            padding: 15px;
-            background: #020617;
-            border-left: 1px solid #1e293b;
-            overflow-y: auto;
-        }
+    #editor-container, #output-container {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      margin: 12px;
+      transition: all 0.2s;
+    }
 
-        button {
-            position: absolute;
-            bottom: 20px;
-            left: 20px;
-            padding: 12px 20px;
-            background: #38bdf8;
-            border: none;
-            color: black;
-            font-weight: bold;
-            cursor: pointer;
-            border-radius: 8px;
-        }
+    #editor, #output {
+      flex: 1;
+      border-radius: 10px;
+      overflow: hidden;
+      transition: box-shadow 0.2s;
+    }
 
-        button:hover {
-            background: #0ea5e9;
-        }
-    </style>
+    #editor.cm-focused {
+      box-shadow: 0 0 20px #4FC3F7;
+    }
+
+    #buttons {
+      display: flex;
+      gap: 12px;
+      margin: 12px;
+      justify-content: center;
+    }
+
+    button {
+      padding: 12px 22px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-weight: bold;
+      box-shadow: 0 3px 6px rgba(0,0,0,0.5);
+    }
+
+    button:hover {
+      transform: scale(1.05);
+      box-shadow: 0 5px 12px rgba(0,0,0,0.6);
+    }
+
+    #run { background: #4FC3F7; color: #000; }
+    #clear { background: #F44336; color: #fff; }
+    #copy { background: #FFC107; color: #000; }
+    #historyBtn { background: #9C27B0; color: #fff; }
+
+    #output {
+      background: #1A1F2C;
+      color: #EEE;
+      padding: 12px;
+      font-family: 'Courier New', monospace;
+      overflow-y: auto;
+      border: 2px solid #4FC3F7;
+      border-radius: 10px;
+      transition: border-color 0.3s, background 0.3s;
+    }
+
+    .success { color: #4CAF50; }
+    .error { color: #F44336; }
+    .alert { color: #FFC107; }
+  </style>
 </head>
-
 <body>
 
-<header>🚀 LogicStart IDE</header>
+  <header>
+    <h1>🚀 LogicStart IDE Steam Elite</h1>
+    <button id="historyBtn">📜 Histórico</button>
+  </header>
 
-<div class="container">
-    <textarea id="code">
-print("Olá, mundo!")
-    </textarea>
+  <div id="editor-container">
+    <textarea id="editor"></textarea>
+  </div>
 
-    <div class="output" id="output">
-Resultado aparecerá aqui...
-    </div>
-</div>
+  <div id="buttons">
+    <button id="run">▶ Executar</button>
+    <button id="clear">🧹 Limpar</button>
+    <button id="copy">📋 Copiar Saída</button>
+  </div>
 
-<button onclick="runCode()">▶ Executar</button>
+  <div id="output-container">
+    <div id="output">Resultado...</div>
+  </div>
 
-<script>
-async function runCode() {
-    const code = document.getElementById("code").value;
-    const output = document.getElementById("output");
+  <!-- Scripts -->
+  <script>
+    const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+      mode: "python",
+      theme: "default",
+      lineNumbers: true,
+      indentUnit: 4,
+      tabSize: 4,
+      autofocus: true,
+    });
 
-    output.innerText = "⏳ Executando...";
+    const outputEl = document.getElementById("output");
 
-    try {
-        const response = await fetch("/run", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({code})
-        });
-
-        const data = await response.json();
-
-        if (data.success) {
-            output.innerText = data.result + "\\n\\n⏱ Tempo: " + data.time + "s";
-        } else {
-            output.innerText = "❌ " + data.error;
-            if (data.debug) {
-                output.innerText += "\\n\\n" + data.debug;
-            }
-        }
-
-    } catch (err) {
-        output.innerText = "💥 Erro de conexão com o servidor";
+    // Feedback animado
+    function setOutput(msg, type="success") {
+      outputEl.textContent = msg;
+      outputEl.className = "";
+      setTimeout(() => outputEl.classList.add(type), 50);
     }
-}
-</script>
 
+    async function runCode() {
+      const code = editor.getValue();
+      if (!code.trim()) {
+        setOutput("⚠️ Nenhum código inserido", "alert");
+        return;
+      }
+      setOutput("⏳ Executando...", "alert");
+
+      try {
+        const res = await fetch("/run", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ code })
+        });
+        const data = await res.json();
+        if(data.success){
+          setOutput(data.result + "\n\n⏱ " + data.time + "s", "success");
+        } else {
+          setOutput("❌ " + data.error, "error");
+        }
+      } catch(e){
+        setOutput("💥 Erro de conexão", "error");
+      }
+    }
+
+    function clearCode() {
+      editor.setValue("");
+      setOutput("Resultado...", "alert");
+    }
+
+    function copyOutput() {
+      navigator.clipboard.writeText(outputEl.textContent);
+    }
+
+    async function showHistory() {
+      try {
+        const res = await fetch("/history");
+        const data = await res.json();
+        if(data.history && data.history.length){
+          let txt = data.history.map((h,i)=>`${i+1}) ${h.result}`).join("\n\n---\n\n");
+          alert("Últimas execuções:\n\n" + txt);
+        } else {
+          alert("Nenhum histórico encontrado");
+        }
+      } catch(e){
+        alert("Erro ao buscar histórico");
+      }
+    }
+
+    // Botões
+    document.getElementById("run").addEventListener("click", runCode);
+    document.getElementById("clear").addEventListener("click", clearCode);
+    document.getElementById("copy").addEventListener("click", copyOutput);
+    document.getElementById("historyBtn").addEventListener("click", showHistory);
+  </script>
 </body>
 </html>
