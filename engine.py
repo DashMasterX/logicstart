@@ -1,59 +1,88 @@
-# engine.py
-import re
-from errors import LogicStartErro
-from executor import Executor
+import ast
+import operator
 
+# =========================
+# EXCEÇÕES
+# =========================
+class LogicStartErro(Exception):
+    pass
+
+# =========================
+# EXECUTOR
+# =========================
 class LogicStart:
-    """
-    Engine profissional LogicStart.
-    Interpreta JavaScript em português, comandos traduzidos.
-    """
-    # Palavras-chave traduzidas
-    PALAVRAS_CHAVE = {
-        'se': 'if',
-        'senao': 'else',
-        'enquanto': 'while',
-        'para': 'for',
-        'funcao': 'function',
-        'retorne': 'return',
-        'imprima': 'console.log',
-        'constante': 'const',
-        'variavel': 'let',
-        'classe': 'class',
-        'novo': 'new'
-    }
-
     def __init__(self, codigo: str):
-        self.codigo_original = codigo
-        self.codigo_traduzido = ""
-        self.executor = Executor()
+        self.codigo = codigo
+        self.vars = {}      # Armazena variáveis
+        self.consts = {}    # Armazena constantes
+        self.functions = {} # Armazena funções
+        self.classes = {}   # Armazena classes
 
-    def traduzir(self):
-        """
-        Traduz a sintaxe LogicStart (português) para JS padrão.
-        """
-        codigo = self.codigo_original
-
-        # Substitui palavras-chave traduzidas
-        for pt, js in self.PALAVRAS_CHAVE.items():
-            # Usa regex para não substituir dentro de strings
-            codigo = re.sub(rf'\b{pt}\b', js, codigo)
-
-        self.codigo_traduzido = codigo
-
+    # =========================
+    # EXECUTAR
+    # =========================
     def executar(self):
-        """
-        Executa o código traduzido usando Executor seguro.
-        """
-        self.traduzir()
-        try:
-            self.executor.executar(self.codigo_traduzido)
-        except Exception as e:
-            raise LogicStartErro(f"Erro na execução: {e}")
+        linhas = [l.strip() for l in self.codigo.split('\n') if l.strip()]
+        for i, linha in enumerate(linhas, 1):
+            try:
+                self._executar_linha(linha)
+            except Exception as e:
+                raise LogicStartErro(f"Linha {i}: {e}")
 
-    def autocomplete(self, prefixo: str):
-        """
-        Retorna lista de sugestões para autocompletar.
-        """
-        sugestoes = [k for k in self.PALAVRAS_CHAVE.keys() if k.startswith(prefixo)]
-        return sugestoes
+    # =========================
+    # PARSER SIMPLIFICADO
+    # =========================
+    def _executar_linha(self, linha):
+        # Comentário
+        if linha.startswith("//"):
+            return
+
+        # Variável
+        if linha.startswith("variavel "):
+            nome, valor = self._parse_assign(linha[8:])
+            self.vars[nome] = valor
+            return
+
+        # Constante
+        if linha.startswith("constante "):
+            nome, valor = self._parse_assign(linha[10:])
+            self.consts[nome] = valor
+            return
+
+        # Impressão
+        if linha.startswith("imprima(") and linha.endswith(")"):
+            conteudo = linha[8:-1]
+            print(self._avaliar_expressao(conteudo))
+            return
+
+        # Retorno
+        if linha.startswith("retorne "):
+            valor = self._avaliar_expressao(linha[7:])
+            raise LogicStartErro(f"retorne usado fora de função: {valor}")
+
+        # TODO: Funções, classes, loops, condicionais
+        # Para simplificação inicial, apenas variáveis, constantes e impressão
+        raise LogicStartErro(f"Comando desconhecido: {linha}")
+
+    # =========================
+    # ASSIGNMENT PARSER
+    # =========================
+    def _parse_assign(self, texto):
+        if "=" not in texto:
+            raise LogicStartErro("Atribuição inválida")
+        partes = texto.split("=",1)
+        nome = partes[0].strip()
+        valor = self._avaliar_expressao(partes[1].strip())
+        return nome, valor
+
+    # =========================
+    # AVALIAR EXPRESSÃO
+    # =========================
+    def _avaliar_expressao(self, expr):
+        # Substitui variáveis e constantes
+        for nome, valor in {**self.vars, **self.consts}.items():
+            expr = expr.replace(nome, str(valor))
+        try:
+            return eval(expr, {"__builtins__": {}}, {})
+        except Exception:
+            return expr  # Retorna string literal se não for número/expressão
