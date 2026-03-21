@@ -3,7 +3,7 @@
 import re
 
 # =========================
-# CONFIGURAÇÃO DE SEGURANÇA
+# CONFIGURAÇÃO
 # =========================
 MAX_LOOP = 1000          # Limite de loops
 MAX_CODE_SIZE = 5000     # Limite de caracteres
@@ -16,13 +16,15 @@ FORBIDDEN_PATTERNS = [
     r"open\(",
     r"__import__\(",
     r"while\s+True",
-    r"for\s+.*\s+in\s+range\(\s*1000000",  # Loop grande demais
+    r"for\s+.*\s+in\s+range\(\s*1000000",  # Loop gigante
 ]
 
-
+# =========================
+# CLASSE DE SEGURANÇA
+# =========================
 class Security:
     """
-    Classe de segurança para validar código LogicStart antes da execução.
+    Classe de segurança para validar código LogicStart.
     """
 
     def __init__(self, max_loop=MAX_LOOP, max_size=MAX_CODE_SIZE):
@@ -32,7 +34,7 @@ class Security:
 
     def verificar(self, codigo: str) -> bool:
         """
-        Valida o código. Retorna True se seguro, lança ValueError se bloqueado.
+        Retorna True se o código estiver seguro. Lança ValueError se inválido.
         """
         if not codigo:
             raise ValueError("Código vazio não permitido")
@@ -50,11 +52,20 @@ class Security:
         if loop_count > self.max_loop:
             raise ValueError(f"Número de loops excede limite seguro ({loop_count}/{self.max_loop})")
 
-        # Verifica nomes inválidos
-        tokens = re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", codigo)
-        forbidden_names = ["import", "exec", "eval", "os", "sys", "subprocess"]
-        for t in tokens:
-            if t.lower() in forbidden_names:
-                raise ValueError(f"Nome de variável ou função proibido: '{t}'")
+        # Verifica nomes de variáveis/funções
+        return validar_nome(codigo)
 
-        return True
+
+# =========================
+# FUNÇÃO VALIDAR NOMES
+# =========================
+def validar_nome(codigo: str) -> bool:
+    """
+    Verifica se os nomes de variáveis/funções não utilizam palavras reservadas ou perigosas.
+    """
+    forbidden_names = ["import", "exec", "eval", "os", "sys", "subprocess", "open", "__import__"]
+    tokens = re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", codigo)
+    for token in tokens:
+        if token.lower() in forbidden_names:
+            raise ValueError(f"Nome de variável ou função proibido: '{token}'")
+    return True
