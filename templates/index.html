@@ -1,34 +1,55 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <title>LogicStart IDE</title>
-    <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
-    <style>
-        body { margin:0; font-family: 'Roboto Mono', monospace; background:#0a0f1c; color:#e0e0e0; }
-        header { background:#1c2536; padding:15px; display:flex; justify-content:space-between; align-items:center; }
-        h1 { margin:0; color:#4fc3f7; }
-        #editor { width: 90%; height:300px; margin:20px auto; background:#141c2b; color:#cfd8dc; padding:10px; border-radius:10px; font-size:16px; resize:none; }
-        #output { width: 90%; height:200px; margin:10px auto; background:#101522; color:#a5d6a7; padding:10px; border-radius:10px; font-size:16px; overflow-y:auto; white-space: pre-wrap; }
-        .btn { padding:10px 20px; margin:5px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
-        #run { background:#4fc3f7; color:#000; }
-        #clear { background:#ef5350; color:#fff; }
-        #copy { background:#cfd8dc; color:#000; }
-        #save { background:#ffca28; color:#000; }
-        #email { width:300px; padding:5px; border-radius:5px; border:none; margin-right:5px; }
-        footer { text-align:center; padding:10px; color:#607d8b; }
-    </style>
+<meta charset="UTF-8">
+<title>LogicStart IDE</title>
+<link href="https://fonts.googleapis.com/css2?family=Roboto+Mono&display=swap" rel="stylesheet">
+<style>
+body { margin:0; font-family:'Roboto Mono', monospace; background:#0a0f1c; color:#e0e0e0; }
+header { background:#1c2536; padding:10px 20px; display:flex; justify-content:space-between; align-items:center; }
+h1 { margin:0; color:#4fc3f7; }
+#tabs { display:flex; margin-left:20px; }
+.tab { padding:5px 10px; margin-right:5px; cursor:pointer; border-radius:5px; background:#1c2536; color:#cfd8dc; }
+.tab.active { background:#4fc3f7; color:#000; font-weight:bold; }
+#editor-container { position: relative; width:90%; margin:10px auto; }
+#editor, #highlight { width:100%; height:300px; padding:10px; border-radius:10px; font-size:16px; line-height:1.4; white-space:pre-wrap; word-wrap:break-word; }
+#editor { position:absolute; top:0; left:0; background:transparent; color:transparent; caret-color:#4fc3f7; z-index:2; border:none; outline:none; resize:none; overflow:auto; }
+#highlight { background:#141c2b; color:#cfd8dc; position:absolute; top:0; left:0; z-index:1; pointer-events:none; overflow:auto; }
+#autocomplete { position:absolute; top:0; left:0; background:#1c2536; border-radius:8px; border:1px solid #4fc3f7; max-height:120px; overflow-y:auto; display:none; z-index:10; }
+#autocomplete div { padding:5px 10px; cursor:pointer; }
+#autocomplete div:hover { background:#4fc3f7; color:#000; }
+#output { width:90%; height:200px; margin:10px auto; background:#101522; color:#a5d6a7; padding:10px; border-radius:10px; font-size:16px; overflow-y:auto; white-space:pre-wrap; }
+.btn { padding:10px 20px; margin:5px; border:none; border-radius:8px; cursor:pointer; font-weight:bold; }
+#run { background:#4fc3f7; color:#000; }
+#clear { background:#ef5350; color:#fff; }
+#copy { background:#cfd8dc; color:#000; }
+#save { background:#ffca28; color:#000; }
+#email { width:300px; padding:5px; border-radius:5px; border:none; margin-right:5px; }
+footer { text-align:center; padding:10px; color:#607d8b; }
+
+/* Sintaxe */
+.keyword { color:#4fc3f7; font-weight:bold; }
+.string { color:#a5d6a7; }
+.number { color:#ffb74d; }
+.comment { color:#90a4ae; font-style:italic; }
+.error { color:#ef5350; text-decoration:underline wavy; font-weight:bold; }
+</style>
 </head>
 <body>
 <header>
-    <h1>🚀 LogicStart IDE</h1>
+    <h1>🚀 LogicStart IDE Pro</h1>
+    <div id="tabs"></div>
     <div>
         <input type="email" id="email" placeholder="Seu email para salvar">
         <button class="btn" id="save">💾 Salvar Código</button>
     </div>
 </header>
 
-<textarea id="editor" placeholder="Digite seu código LogicStart..."></textarea>
+<div id="editor-container">
+    <pre id="highlight"></pre>
+    <textarea id="editor" placeholder="Digite seu código LogicStart..."></textarea>
+    <div id="autocomplete"></div>
+</div>
 
 <div style="text-align:center;">
     <button class="btn" id="run">▶ Executar</button>
@@ -36,67 +57,150 @@
     <button class="btn" id="copy">📋 Copiar Resultado</button>
 </div>
 
-<div id="output" placeholder="Resultado...">Resultado aparecerá aqui</div>
-
-<footer>LogicStart IDE v1.0 — Profissional & Seguro</footer>
+<div id="output">Resultado aparecerá aqui</div>
+<footer>LogicStart IDE Pro v2.0 — Profissional & Seguro</footer>
 
 <script>
+// =========================
+// Variáveis
+// =========================
 const editor = document.getElementById('editor');
+const highlight = document.getElementById('highlight');
 const output = document.getElementById('output');
 const emailInput = document.getElementById('email');
+const acBox = document.getElementById('autocomplete');
+const tabsDiv = document.getElementById('tabs');
 
-document.getElementById('run').addEventListener('click', async () => {
-    output.textContent = "⏳ Executando...";
-    const codigo = editor.value;
+let arquivos = [{"nome":"main.ls","conteudo":""}];
+let abaAtiva = 0;
 
-    try {
-        const res = await fetch('/run', {
-            method:'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ code: codigo })
-        });
-        const data = await res.json();
-        if(data.success){
-            output.textContent = data.result + `\n\n⏱ ${data.time}s`;
-        }else{
-            output.textContent = `❌ ${data.error}`;
+// =========================
+// Cria abas
+// =========================
+function atualizarTabs(){
+    tabsDiv.innerHTML = '';
+    arquivos.forEach((a,i)=>{
+        const div = document.createElement('div');
+        div.textContent = a.nome;
+        div.className = 'tab' + (i===abaAtiva?' active':'');
+        div.addEventListener('click', ()=>{ abaAtiva=i; editor.value=a.conteudo; atualizarHighlight(); atualizarTabs(); });
+        tabsDiv.appendChild(div);
+    });
+}
+atualizarTabs();
+
+// =========================
+// Palavras-chave LogicStart
+// =========================
+const keywords = ['se','senao','enquanto','para','funcao','retorne','imprima','constante','variavel','classe','novo'];
+
+// =========================
+// Atualiza destaque com erro dinâmico e execução
+// =========================
+function atualizarHighlight(erroLinha=null){
+    let code = editor.value
+        .replace(/&/g,'&amp;')
+        .replace(/</g,'&lt;')
+        .replace(/>/g,'&gt;');
+
+    // Strings
+    code = code.replace(/(\".*?\"|\'.*?\')/g,'<span class="string">$1</span>');
+    // Comentários
+    code = code.replace(/(\/\/.*)/g,'<span class="comment">$1</span>');
+    // Números
+    code = code.replace(/\b(\d+)\b/g,'<span class="number">$1</span>');
+    // Palavras-chave
+    keywords.forEach(k=>{
+        const regex = new RegExp('\\b'+k+'\\b','g');
+        code = code.replace(regex,'<span class="keyword">'+k+'</span>');
+    });
+
+    // Detecta erros: comandos desconhecidos
+    const linhas = code.split('\n');
+    linhas.forEach((linha,i)=>{
+        if(!linha.match(/^\s*(\/\/.*|$)/) && !linha.match(new RegExp(keywords.join('|'))) && linha.trim()!=='' && linha.includes(' ')){
+            linhas[i] = `<span class="error">${linha}</span>`;
         }
-    } catch(e){
-        output.textContent = `💥 Erro: ${e}`;
-    }
+        // Destaca linha do erro real
+        if(erroLinha!==null && i===erroLinha-1){
+            linhas[i] = `<span class="error" style="background:#ef5350;color:#000;">${linha}</span>`;
+        }
+    });
+    highlight.innerHTML = linhas.join('\n');
+    arquivos[abaAtiva].conteudo = editor.value;
+}
+editor.addEventListener('input', ()=>atualizarHighlight());
+editor.addEventListener('scroll', ()=>{highlight.scrollTop = editor.scrollTop;});
+
+// =========================
+// Autocomplete
+// =========================
+editor.addEventListener('input', ()=>{
+    const linhas = editor.value.split('\n');
+    const ultimaLinha = linhas[linhas.length-1];
+    const prefixo = ultimaLinha.match(/\b\w+$/);
+    if(!prefixo){ acBox.style.display='none'; return; }
+    fetch(`/autocomplete?prefixo=${prefixo[0]}`)
+        .then(res=>res.json())
+        .then(data=>{
+            if(data.suggestions.length===0){ acBox.style.display='none'; return; }
+            acBox.innerHTML='';
+            data.suggestions.forEach(s=>{
+                const div=document.createElement('div');
+                div.textContent=s;
+                div.addEventListener('click', ()=>{
+                    linhas[linhas.length-1] = ultimaLinha.replace(/\w+$/,s);
+                    editor.value=linhas.join('\n');
+                    acBox.style.display='none';
+                    atualizarHighlight();
+                    editor.focus();
+                });
+                acBox.appendChild(div);
+            });
+            acBox.style.top = editor.scrollTop + 'px';
+            acBox.style.left = '0px';
+            acBox.style.width = '100%';
+            acBox.style.display='block';
+        });
 });
 
-document.getElementById('clear').addEventListener('click', () => {
-    editor.value = '';
-    output.textContent = '';
-});
-
-document.getElementById('copy').addEventListener('click', () => {
-    navigator.clipboard.writeText(output.textContent);
-});
-
-document.getElementById('save').addEventListener('click', async () => {
-    const email = emailInput.value.trim();
-    if(!email){
-        alert("📧 Digite um email válido");
-        return;
-    }
-    const codigo = editor.value;
+// =========================
+// Botões
+// =========================
+document.getElementById('run').addEventListener('click', async ()=>{
+    output.textContent="⏳ Executando...";
+    const codigo=editor.value;
     try{
-        const res = await fetch('/save_code', {
-            method:'POST',
-            headers:{ 'Content-Type':'application/json' },
-            body: JSON.stringify({ email, code: codigo })
-        });
-        const data = await res.json();
+        const res=await fetch('/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({code:codigo})});
+        const data=await res.json();
         if(data.success){
-            alert("💾 Código salvo com sucesso!");
+            output.textContent=data.result + `\n\n⏱ ${data.time}s`;
+            atualizarHighlight(); // Limpa marcação de erro
         }else{
-            alert("❌ Falha ao salvar: " + data.error);
+            // Procura linha do erro se disponível
+            let linhaErro = null;
+            if(data.debug){
+                const match = data.debug.match(/File "<string>", line (\d+)/);
+                if(match) linhaErro = parseInt(match[1]);
+            }
+            atualizarHighlight(linhaErro);
+            output.textContent=`❌ ${data.error}\n${data.debug?data.debug:''}`;
         }
-    }catch(e){
-        alert("💥 Erro ao salvar: " + e);
-    }
+    }catch(e){ output.textContent=`💥 Erro: ${e}`; }
+});
+
+document.getElementById('clear').addEventListener('click', ()=>{ editor.value=''; output.textContent=''; atualizarHighlight(); });
+document.getElementById('copy').addEventListener('click', ()=>{ navigator.clipboard.writeText(output.textContent); });
+document.getElementById('save').addEventListener('click', async ()=>{
+    const email=emailInput.value.trim();
+    if(!email){ alert("📧 Digite um email válido"); return; }
+    const codigo=editor.value;
+    try{
+        const res=await fetch('/save_code',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email,code:codigo})});
+        const data=await res.json();
+        if(data.success){ alert("💾 Código salvo com sucesso!"); }
+        else{ alert("❌ Falha ao salvar: "+data.error); }
+    }catch(e){ alert("💥 Erro ao salvar: "+e); }
 });
 </script>
 </body>
