@@ -3,44 +3,33 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart IDE</title>
+<title>LogicStart Elite</title>
 
-<!-- CodeMirror 6 (Editor com destaque de sintaxe) -->
+<!-- CodeMirror 6 -->
 <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
 <script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/python/python.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/javascript/javascript.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
 
 <style>
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: #181818;
-    color: #e0e0e0;
-}
+body { margin:0; font-family:'Segoe UI', sans-serif; background:#181818; color:#e0e0e0; }
 #login-canto {
-    position: absolute;
-    top: 20px;
-    right: 20px;
-    background: #222;
-    padding: 15px;
-    border-radius: 8px;
-    width: 220px;
-    box-shadow: 0 0 10px #000;
+    position:absolute; top:20px; right:20px; background:#222; padding:15px; border-radius:8px; width:220px;
+    box-shadow:0 0 10px #000;
 }
-#login-canto h3 { margin: 0 0 10px 0; font-size: 1em; }
-#login-canto .input-field { width: 100%; padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #555; background: #1e1e1e; color: #e0e0e0; }
-#login-canto .btn { width: 100%; background: #3a78d7; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; margin-top: 5px; }
-#login-canto .btn:hover { background: #2b5ea0; }
-#login-canto .oauth-btn { background: #ff5555; }
-#login-canto .oauth-btn:hover { background: #cc4444; }
+#login-canto h3{ margin:0 0 10px 0; font-size:1em; }
+#login-canto .input-field{ width:100%; padding:8px; margin:5px 0; border-radius:5px; border:1px solid #555; background:#1e1e1e; color:#e0e0e0; }
+#login-canto .btn{ width:100%; background:#3a78d7; color:white; border:none; padding:10px; cursor:pointer; border-radius:5px; margin-top:5px; }
+#login-canto .btn:hover{ background:#2b5ea0; }
+#login-canto .oauth-btn{ background:#ff5555; }
+#login-canto .oauth-btn:hover{ background:#cc4444; }
 
-#ide-container { padding: 20px; display: flex; flex-direction: column; max-width: 1200px; margin: auto; }
-.controls { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
-.controls .btn { flex: 1; min-width: 100px; }
-#saida { margin-top: 15px; background: #111; padding: 10px; border-radius: 5px; min-height: 150px; white-space: pre-wrap; font-family: monospace; }
-
-/* Estilização do CodeMirror */
-.cm-editor { height: 400px; border-radius: 5px; }
+#ide-container { padding:20px; display:flex; flex-direction:column; max-width:1200px; margin:auto; }
+.controls{ margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+.controls .btn{ flex:1; min-width:100px; }
+#saida{ margin-top:15px; background:#111; padding:10px; border-radius:5px; min-height:150px; white-space:pre-wrap; font-family:monospace; }
+.cm-editor{ height:400px; border-radius:5px; }
 </style>
 </head>
 <body>
@@ -58,6 +47,7 @@ body {
     <div class="controls">
         <button class="btn" onclick="executar()">Executar</button>
         <button class="btn" onclick="salvar()">Salvar</button>
+        <button class="btn" onclick="verHistorico()">Histórico</button>
         <button class="btn" onclick="logout()">Logout</button>
     </div>
     <div id="saida"></div>
@@ -65,16 +55,40 @@ body {
 
 <script>
 let editor = CodeMirror.fromTextArea(document.getElementById("codigo"), {
-    mode: "python",
+    mode: "javascript",
     theme: "monokai",
     lineNumbers: true,
     autoCloseBrackets: true,
     matchBrackets: true,
     indentUnit: 4,
     tabSize: 4,
-    styleActiveLine: true
+    styleActiveLine: true,
+    extraKeys: {"Ctrl-Space":"autocomplete"}
 });
 
+// Palavras-chave portugues + JS
+const palavrasChave = [
+    "inicio", "fim", "enquanto", "se", "senao", "para", "funcao",
+    "var", "let", "const", "function", "return", "if", "else", "for", "while", "console.log"
+];
+
+function autocomplete(cm) {
+    const cur = cm.getCursor();
+    const token = cm.getTokenAt(cur);
+    const start = token.start;
+    const end = cur.ch;
+    const word = token.string;
+    const list = palavrasChave.filter(w => w.startsWith(word));
+    return {list: list.length? list: palavrasChave, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, end)};
+}
+
+editor.on("inputRead", function(cm, change) {
+    if(change.text[0].match(/[\w]/)) cm.showHint({hint: autocomplete});
+});
+
+// -------------------
+// Funções front-end
+// -------------------
 function loginEmail() {
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
@@ -84,15 +98,13 @@ function loginEmail() {
         headers:{"Content-Type":"application/json"},
         body: JSON.stringify({email, senha})
     }).then(res=>res.json()).then(data=>{
-        if(data.success) alert("Login feito com sucesso!");
-        else alert(data.error);
+        alert(data.success ? "Login feito com sucesso!" : data.error);
     });
 }
 
 function loginGoogle() {
     fetch("/login/google").then(res=>res.json()).then(data=>{
-        if(data.success) alert("Login Google feito com sucesso!");
-        else alert("Falha no login Google");
+        alert(data.success ? "Login Google feito com sucesso!" : "Falha no login Google");
     });
 }
 
@@ -120,10 +132,19 @@ function salvar(){
     });
 }
 
-function logout(){
-    fetch("/logout").then(()=>{
-        alert("Logout efetuado!");
+function verHistorico(){
+    const email = prompt("Digite seu e-mail para ver histórico:");
+    if(!email) return;
+    fetch(`/history/${email}`).then(res=>res.json()).then(data=>{
+        if(!data.length){ alert("Nenhum código salvo!"); return; }
+        let output = "Histórico:\n\n";
+        data.forEach((item,i)=> output += `${i+1} - ${new Date(item.timestamp*1000).toLocaleString()}\n${item.codigo}\n\n`);
+        document.getElementById("saida").textContent = output;
     });
+}
+
+function logout(){
+    fetch("/logout").then(()=>alert("Logout efetuado!"));
 }
 </script>
 
