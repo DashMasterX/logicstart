@@ -1,23 +1,16 @@
 from flask import Flask, request, jsonify, send_from_directory
 from flask_cors import CORS
-import os
-import io
-import sys
-import time
-import traceback
-import json
+import os, io, sys, time, traceback, json
+
+from executor import Executor
 
 app = Flask(__name__)
 CORS(app)
 
-# Diretórios
 SAVE_DIR = "codigos_salvos"
 HISTORY_FILE = os.path.join(SAVE_DIR, "historico.json")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
-# -------------------------
-# Segurança
-# -------------------------
 MAX_CODE_SIZE = 5000
 BLOCKED_KEYWORDS = ["import os", "import sys", "open(", "exec(", "__"]
 
@@ -29,14 +22,13 @@ def verificar_codigo(codigo):
             return False, f"Código bloqueado: contém '{palavra}'"
     return True, None
 
-# -------------------------
-# Login
-# -------------------------
+# -----------------------------
+# LOGIN
+# -----------------------------
 @app.route("/login/email", methods=["POST"])
 def login_email():
     data = request.get_json()
-    email = data.get("email")
-    senha = data.get("senha")
+    email, senha = data.get("email"), data.get("senha")
     if not email or not senha:
         return jsonify({"success": False, "error": "Email ou senha não preenchidos"})
     return jsonify({"success": True})
@@ -49,9 +41,9 @@ def login_google():
 def logout():
     return jsonify({"success": True})
 
-# -------------------------
-# Execução de código
-# -------------------------
+# -----------------------------
+# EXECUÇÃO DE CÓDIGO
+# -----------------------------
 @app.route("/run", methods=["POST"])
 def run_code():
     start_time = time.time()
@@ -62,24 +54,17 @@ def run_code():
         if not ok:
             return jsonify({"success": False, "error": msg})
 
-        buffer = io.StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = buffer
-        try:
-            exec(codigo, {"__builtins__": {}})
-        finally:
-            sys.stdout = old_stdout
-
-        output = buffer.getvalue()
+        executor = Executor(codigo)
+        output = executor.executar()
         execution_time = round(time.time() - start_time, 4)
-        return jsonify({"success": True, "result": output if output else "✔ Executado com sucesso", "time": execution_time})
+        return jsonify({"success": True, "result": output, "time": execution_time})
     except Exception:
         erro = traceback.format_exc()
         return jsonify({"success": False, "error": "Erro na execução", "debug": erro})
 
-# -------------------------
-# Salvar código e histórico
-# -------------------------
+# -----------------------------
+# SALVAR E HISTÓRICO
+# -----------------------------
 def carregar_historico():
     if os.path.exists(HISTORY_FILE):
         with open(HISTORY_FILE, "r", encoding="utf-8") as f:
@@ -113,18 +98,18 @@ def ver_historico(email):
     historico = carregar_historico()
     return jsonify(historico.get(email, []))
 
-# -------------------------
-# Front-end
-# -------------------------
+# -----------------------------
+# FRONT-END
+# -----------------------------
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def index(path):
     return send_from_directory(".", "index.html")
 
-# -------------------------
-# Start
-# -------------------------
+# -----------------------------
+# START
+# -----------------------------
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
-    print(f"🚀 LogicStart IDE profissional iniciando na porta {port}")
+    print(f"🚀 LogicStart Elite iniciando na porta {port}")
     app.run(host="0.0.0.0", port=port)
