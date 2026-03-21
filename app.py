@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify, render_template, redirect, url_for, s
 from flask_cors import CORS
 from flask_dance.contrib.google import make_google_blueprint, google
 from pymongo import MongoClient
-import os, time, traceback, json
+import os, time, traceback
 from executor import Executor
 
 # -----------------------------
@@ -16,7 +16,6 @@ app.secret_key = os.urandom(24)
 # EXECUTOR
 # -----------------------------
 SAVE_DIR = "codigos_salvos"
-HISTORY_FILE = os.path.join(SAVE_DIR, "historico.json")
 os.makedirs(SAVE_DIR, exist_ok=True)
 
 MAX_CODE_SIZE = 5000
@@ -31,7 +30,7 @@ def verificar_codigo(codigo):
     return True, None
 
 # -----------------------------
-# MONGODB (via variáveis de ambiente)
+# MONGODB
 # -----------------------------
 MONGO_URI = os.environ.get("MONGO_URI")
 client = MongoClient(MONGO_URI)
@@ -43,7 +42,7 @@ def verificar_usuario(email, senha):
     return users_collection.find_one({"email": email, "senha": senha})
 
 # -----------------------------
-# GOOGLE OAUTH (via variáveis de ambiente)
+# GOOGLE OAUTH
 # -----------------------------
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
@@ -77,12 +76,19 @@ def login_google_redirect():
     resp = google.get("/oauth2/v2/userinfo")
     assert resp.ok, resp.text
     session['user'] = resp.json()['email']
-    return jsonify({"success": True, "email": session['user']})
+    return redirect("/ide")  # redireciona direto para IDE após login
 
 @app.route("/logout")
 def logout():
     session.pop('user', None)
     return jsonify({"success": True})
+
+# -----------------------------
+# SESSÃO PARA IDE
+# -----------------------------
+@app.route("/session")
+def session_status():
+    return jsonify({"user": session.get("user")})
 
 # -----------------------------
 # EXECUÇÃO DE CÓDIGO
@@ -115,9 +121,9 @@ def salvar_historico_mongo(email, codigo):
 def save_code():
     data = request.get_json()
     codigo = data.get("code", "")
-    email = data.get("email", "anonimo")
-    if not codigo:
-        return jsonify({"success": False, "error": "Código vazio"})
+    email = data.get("email")
+    if not codigo or not email:
+        return jsonify({"success": False, "error": "Código vazio ou usuário não identificado"})
     safe_email = email.replace("@", "_at_").replace(".", "_")
     filename = os.path.join(SAVE_DIR, f"{safe_email}_{int(time.time())}.txt")
     with open(filename, "w", encoding="utf-8") as f:
@@ -136,7 +142,10 @@ def ver_historico(email):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def index(path):
-    return render_template("index.html")
+    if path.startswith("ide"):
+        return render_template("ide.html")
+    else:
+        return render_template("login.html")
 
 # -----------------------------
 # START
