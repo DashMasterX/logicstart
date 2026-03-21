@@ -1,31 +1,25 @@
 # engine.py
-
 from security import Security, MAX_LOOP, validar_nome
 from errors import LogicStartErro
-
 import re
 
 class LogicStart:
     """
-    Interpretador profissional LogicStart (português estilo Java).
+    Interpretador LogicStart (português estilo JavaScript/Steam)
     """
 
     def __init__(self, codigo: str):
         self.codigo = codigo
-        self.variaveis = {}        # Variáveis globais
-        self.funcoes = {}          # Funções definidas
+        self.variaveis = {}   # Variáveis globais
+        self.funcoes = {}     # Funções definidas
         self.security = Security()
 
         # Validação de segurança
-        try:
-            self.security.verificar(codigo)
-        except Exception as e:
-            raise LogicStartErro(f"Erro de segurança: {e}")
+        if not self.security.verificar(codigo):
+            raise LogicStartErro("Código bloqueado por segurança")
 
     def executar(self):
-        """
-        Executa o código LogicStart.
-        """
+        """Executa o código principal"""
         self._executar_bloco(self.codigo.splitlines(), self.variaveis)
 
     # =========================
@@ -56,7 +50,7 @@ class LogicStart:
             if match_func:
                 nome, args = match_func.groups()
                 bloco = self._capturar_bloco(linhas, i)
-                self.funcoes[nome] = (args.split(","), bloco)
+                self.funcoes[nome] = (args.split(",") if args.strip() else [], bloco)
                 i += len(bloco) + 2
                 continue
 
@@ -85,8 +79,7 @@ class LogicStart:
             # =========================
             if linha.startswith("se "):
                 cond = re.match(r"se\s+(.+):", linha).group(1)
-                resultado = self._avaliar_expressao(cond, escopo)
-                if resultado:
+                if self._avaliar_expressao(cond, escopo):
                     i += 1
                     continue
                 else:
@@ -126,7 +119,7 @@ class LogicStart:
                 continue
 
             # =========================
-            # FIM DE BLOCO
+            # FIM
             # =========================
             if linha == "fim":
                 i += 1
@@ -135,20 +128,32 @@ class LogicStart:
             raise LogicStartErro(f"Comando desconhecido: {linha}")
 
     # =========================
-    # FUNÇÕES AUXILIARES
+    # AVALIAR EXPRESSÃO
     # =========================
     def _avaliar_expressao(self, expr, escopo):
-        # Substitui variáveis
+        """
+        Avalia expressões aritméticas, strings, booleanos e variáveis.
+        """
+        # Substitui variáveis pelo valor real
         for nome, valor in escopo.items():
-            expr = re.sub(rf"\b{nome}\b", str(valor), expr)
+            if isinstance(valor, str):
+                valor_str = f'"{valor}"'
+            else:
+                valor_str = str(valor)
+            expr = re.sub(rf"\b{nome}\b", valor_str, expr)
 
-        # Avalia número, booleano ou concatenação
+        # Substitui booleanos português
+        expr = expr.replace("verdadeiro", "True").replace("falso", "False")
+
+        # Avaliação segura
         try:
-            return eval(expr)
+            return eval(expr, {"__builtins__": {}})
         except Exception:
-            # Remove aspas
             return expr.strip('"').strip("'")
 
+    # =========================
+    # CAPTURAR BLOCO
+    # =========================
     def _capturar_bloco(self, linhas, start):
         bloco = []
         i = start + 1
@@ -157,12 +162,18 @@ class LogicStart:
             i += 1
         return bloco
 
+    # =========================
+    # PULAR BLOCO
+    # =========================
     def _pular_bloco(self, linhas, start):
         i = start + 1
         while i < len(linhas) and linhas[i].strip() != "fim":
             i += 1
         return i + 1
 
+    # =========================
+    # CHAMAR FUNÇÃO
+    # =========================
     def _chamar_funcao(self, nome, args_str, escopo):
         arg_values = [self._avaliar_expressao(a.strip(), escopo) for a in args_str.split(",") if a.strip()]
         arg_names, bloco = self.funcoes[nome]
