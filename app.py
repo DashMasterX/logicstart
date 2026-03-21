@@ -1,11 +1,20 @@
-from flask import Flask, request, jsonify, render_template
+from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
-import os, io, sys, time, traceback, json
+from flask_dance.contrib.google import make_google_blueprint, google
+from pymongo import MongoClient
+import os, time, traceback, json
 from executor import Executor
 
+# -----------------------------
+# CONFIGURAÇÕES DO FLASK
+# -----------------------------
 app = Flask(__name__)
 CORS(app)
+app.secret_key = os.urandom(24)
 
+# -----------------------------
+# EXECUTOR
+# -----------------------------
 SAVE_DIR = "codigos_salvos"
 HISTORY_FILE = os.path.join(SAVE_DIR, "historico.json")
 os.makedirs(SAVE_DIR, exist_ok=True)
@@ -22,6 +31,31 @@ def verificar_codigo(codigo):
     return True, None
 
 # -----------------------------
+# MONGODB (via variáveis de ambiente)
+# -----------------------------
+MONGO_URI = os.environ.get("MONGO_URI")
+client = MongoClient(MONGO_URI)
+db = client['logicstart_elite']
+users_collection = db['users']
+history_collection = db['history']
+
+def verificar_usuario(email, senha):
+    return users_collection.find_one({"email": email, "senha": senha})
+
+# -----------------------------
+# GOOGLE OAUTH (via variáveis de ambiente)
+# -----------------------------
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+blueprint = make_google_blueprint(
+    client_id=GOOGLE_CLIENT_ID,
+    client_secret=GOOGLE_CLIENT_SECRET,
+    redirect_to="login_google_redirect"
+)
+app.register_blueprint(blueprint, url_prefix="/login")
+
+# -----------------------------
 # LOGIN
 # -----------------------------
 @app.route("/login/email", methods=["POST"])
@@ -30,14 +64,24 @@ def login_email():
     email, senha = data.get("email"), data.get("senha")
     if not email or not senha:
         return jsonify({"success": False, "error": "Email ou senha não preenchidos"})
-    return jsonify({"success": True})
+    user = verificar_usuario(email, senha)
+    if user:
+        session['user'] = email
+        return jsonify({"success": True})
+    return jsonify({"success": False, "error": "Email ou senha incorretos"})
 
 @app.route("/login/google")
-def login_google():
-    return jsonify({"success": True})
+def login_google_redirect():
+    if not google.authorized:
+        return redirect(url_for("google.login"))
+    resp = google.get("/oauth2/v2/userinfo")
+    assert resp.ok, resp.text
+    session['user'] = resp.json()['email']
+    return jsonify({"success": True, "email": session['user']})
 
 @app.route("/logout")
 def logout():
+    session.pop('user', None)
     return jsonify({"success": True})
 
 # -----------------------------
@@ -64,19 +108,8 @@ def run_code():
 # -----------------------------
 # SALVAR E HISTÓRICO
 # -----------------------------
-def carregar_historico():
-    if os.path.exists(HISTORY_FILE):
-        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    return {}
-
-def salvar_historico(email, codigo):
-    historico = carregar_historico()
-    if email not in historico:
-        historico[email] = []
-    historico[email].append({"codigo": codigo, "timestamp": int(time.time())})
-    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
-        json.dump(historico, f, ensure_ascii=False, indent=2)
+def salvar_historico_mongo(email, codigo):
+    history_collection.insert_one({"email": email, "codigo": codigo, "timestamp": int(time.time())})
 
 @app.route("/save", methods=["POST"])
 def save_code():
@@ -89,13 +122,13 @@ def save_code():
     filename = os.path.join(SAVE_DIR, f"{safe_email}_{int(time.time())}.txt")
     with open(filename, "w", encoding="utf-8") as f:
         f.write(codigo)
-    salvar_historico(email, codigo)
+    salvar_historico_mongo(email, codigo)
     return jsonify({"success": True})
 
 @app.route("/history/<email>")
 def ver_historico(email):
-    historico = carregar_historico()
-    return jsonify(historico.get(email, []))
+    historico = list(history_collection.find({"email": email}, {"_id": 0}))
+    return jsonify(historico)
 
 # -----------------------------
 # FRONT-END
