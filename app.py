@@ -1,49 +1,49 @@
-from flask import Flask, render_template, request, jsonify
-from engine import LogicStart
-from security import Security
-from errors import LogicStartErro
-
+from flask import Flask, request, jsonify, render_template
 import io
 import sys
-import traceback
-import time
 import os
+import time
 import logging
 
 # =========================
-# CONFIG APP
+# CONFIGURAÇÃO
 # =========================
 app = Flask(__name__)
+MAX_CODE_SIZE = 5000  # limite de código
+CODE_SAVE_FOLDER = "codes"  # pasta para salvar códigos
 
 # Logging profissional
 logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("LogicStartIDE")
+logger = logging.getLogger("LogicStart")
 
-# Segurança e limites
-MAX_CODE_SIZE = 5000
+# Cria pasta de códigos caso não exista
+os.makedirs(CODE_SAVE_FOLDER, exist_ok=True)
 
-# Lista de comandos da linguagem LogicStart (em português)
-COMMANDS = [
-    "se", "senao", "enquanto", "para", "funcao", "retorne",
-    "imprima", "constante", "variavel", "classe", "novo"
-]
+# =========================
+# FUNÇÕES AUXILIARES
+# =========================
+def error_response(msg, debug=None):
+    return jsonify({"success": False, "error": msg, "debug": debug})
 
-# Armazenamento simples de códigos salvos (em memória, para exemplo)
-SAVED_CODES = {}  # {email: [lista de códigos]}
-
+def save_code(email, code):
+    filename = os.path.join(CODE_SAVE_FOLDER, f"{email}_{int(time.time())}.txt")
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(code)
+    return filename
 
 # =========================
 # ROTAS
 # =========================
 @app.route("/")
 def home():
-    return render_template("index.html")
-
+    try:
+        return render_template("index.html")
+    except Exception:
+        return "LogicStart IDE Online 🚀"
 
 @app.route("/health")
 def health():
-    return jsonify({"status": "online", "service": "LogicStartIDE", "time": time.time()})
-
+    return jsonify({"status": "online", "service": "LogicStart", "time": time.time()})
 
 @app.route("/run", methods=["POST"])
 def run_code():
@@ -51,80 +51,54 @@ def run_code():
     try:
         data = request.get_json()
         if not data or "code" not in data:
-            return jsonify({"success": False, "error": "Código não enviado"})
+            return error_response("Código não enviado")
+        
+        code = data["code"]
 
-        codigo = data["code"]
-
-        # =========================
-        # SEGURANÇA
-        # =========================
-        if len(codigo) > MAX_CODE_SIZE:
-            return jsonify({"success": False, "error": "Código muito grande"})
-
-        if not Security().verificar(codigo):
-            return jsonify({"success": False, "error": "Código bloqueado por segurança"})
-
-        # =========================
-        # EXECUÇÃO
-        # =========================
+        # Segurança
+        if len(code) > MAX_CODE_SIZE:
+            return error_response("Código muito grande")
+        
+        # Executa código em sandbox simples
         buffer = io.StringIO()
         old_stdout = sys.stdout
         sys.stdout = buffer
 
         try:
-            logic = LogicStart(codigo)
-            logic.executar()
-            output = buffer.getvalue() or "✔ Executado com sucesso"
-
+            # Executa código com globals limitados
+            exec(code, {"__builtins__": {}})
         finally:
             sys.stdout = old_stdout
 
         execution_time = round(time.time() - start_time, 4)
-        return jsonify({"success": True, "result": output, "time": execution_time})
+        output = buffer.getvalue()
+        logger.info(f"[EXEC] Tempo: {execution_time}s")
 
-    except LogicStartErro as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success": True, "result": output if output else "✔ Executado com sucesso", "time": execution_time})
+    
+    except Exception as e:
+        logger.error(f"[CRASH] {e}")
+        return error_response("Erro interno", debug=str(e))
 
-    except Exception:
-        erro = traceback.format_exc()
-        return jsonify({"success": False, "error": "Erro interno", "debug": erro})
-
-
-# =========================
-# SALVAR CÓDIGO POR EMAIL
-# =========================
-@app.route("/save_code", methods=["POST"])
-def save_code():
+@app.route("/save", methods=["POST"])
+def save():
     try:
         data = request.get_json()
-        email = data.get("email")
-        codigo = data.get("code")
-        if not email or not codigo:
-            return jsonify({"success": False, "error": "Email ou código não fornecido"})
+        if not data or "email" not in data or "code" not in data:
+            return error_response("Email ou código não enviados")
 
-        if email not in SAVED_CODES:
-            SAVED_CODES[email] = []
-        SAVED_CODES[email].append(codigo)
-
-        logger.info(f"Código salvo para {email}")
-        return jsonify({"success": True})
-
+        email = data["email"]
+        code = data["code"]
+        filepath = save_code(email, code)
+        logger.info(f"[SAVE] Código salvo: {filepath}")
+        return jsonify({"success": True, "message": f"Código salvo com sucesso em {filepath}"})
+    
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-
-# =========================
-# AUTOCOMPLETE
-# =========================
-@app.route("/autocomplete")
-def autocomplete():
-    prefixo = request.args.get("prefixo","").lower()
-    sugeridos = [c for c in COMMANDS if c.startswith(prefixo)]
-    return jsonify({"suggestions": sugeridos})
-
+        logger.error(f"[SAVE ERROR] {e}")
+        return error_response("Erro ao salvar código", debug=str(e))
 
 # =========================
-# ERRO PADRÃO
+# HANDLER DE ERROS
 # =========================
 @app.errorhandler(404)
 def not_found(e):
@@ -134,11 +108,10 @@ def not_found(e):
 def internal_error(e):
     return jsonify({"error": "Erro interno do servidor"}), 500
 
-
 # =========================
 # START
 # =========================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
-    logger.info(f"🚀 LogicStartIDE iniciando na porta {port}")
+    logger.info(f"🚀 Iniciando LogicStart na porta {port}")
     app.run(host="0.0.0.0", port=port)
