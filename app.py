@@ -1,91 +1,130 @@
-from flask import Flask, request, jsonify, render_template, session, redirect
-import os, io, sys, time, logging
-from engine import LogicStart
-from security import Security
+from flask import Flask, request, jsonify, send_from_directory
+from flask_cors import CORS
+import os
+import io
+import sys
+import time
+import traceback
+import json
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
+CORS(app)
+
+# Diretórios
+SAVE_DIR = "codigos_salvos"
+HISTORY_FILE = os.path.join(SAVE_DIR, "historico.json")
+os.makedirs(SAVE_DIR, exist_ok=True)
+
+# -------------------------
+# Segurança
+# -------------------------
 MAX_CODE_SIZE = 5000
+BLOCKED_KEYWORDS = ["import os", "import sys", "open(", "exec(", "__"]
 
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger("LogicStart")
+def verificar_codigo(codigo):
+    if len(codigo) > MAX_CODE_SIZE:
+        return False, "Código muito grande"
+    for palavra in BLOCKED_KEYWORDS:
+        if palavra in codigo:
+            return False, f"Código bloqueado: contém '{palavra}'"
+    return True, None
 
-# ---------------------------
-# ROTAS PÚBLICAS
-# ---------------------------
-@app.route("/")
-def index(): return render_template("index.html")
-@app.route("/login") 
-def login(): return render_template("login.html")
-
+# -------------------------
+# Login
+# -------------------------
 @app.route("/login/email", methods=["POST"])
 def login_email():
     data = request.get_json()
-    email, senha = data.get("email"), data.get("senha")
-    if email and senha: 
-        session["user"] = {"email": email}
-        return jsonify({"success": True})
-    return jsonify({"success": False, "error":"Email ou senha inválidos"})
+    email = data.get("email")
+    senha = data.get("senha")
+    if not email or not senha:
+        return jsonify({"success": False, "error": "Email ou senha não preenchidos"})
+    return jsonify({"success": True})
 
 @app.route("/login/google")
 def login_google():
-    session["user"] = {"email":"usuario@gmail.com"}
-    return redirect("/ide")
+    return jsonify({"success": True})
 
-@app.route("/ide")
-def ide():
-    if "user" not in session: return redirect("/login")
-    return render_template("ide.html")
+@app.route("/logout")
+def logout():
+    return jsonify({"success": True})
 
-# ---------------------------
-# EXECUÇÃO DE CÓDIGO
-# ---------------------------
+# -------------------------
+# Execução de código
+# -------------------------
 @app.route("/run", methods=["POST"])
 def run_code():
-    if "user" not in session: return jsonify({"success": False, "error":"Faça login primeiro"})
-    start = time.time()
-    data = request.get_json()
-    codigo = data.get("code")
-    if not codigo: return jsonify({"success": False, "error":"Código não enviado"})
-    if len(codigo) > MAX_CODE_SIZE: return jsonify({"success": False, "error":"Código muito grande"})
-    if not Security().verificar(codigo): return jsonify({"success": False, "error":"Código bloqueado"})
-
-    buffer = io.StringIO()
-    old_stdout = sys.stdout
-    sys.stdout = buffer
+    start_time = time.time()
     try:
-        logic = LogicStart(codigo)
-        logic.executar()
-        output = buffer.getvalue()
-    finally: sys.stdout = old_stdout
-    return jsonify({"success": True, "result": output if output else "✔ Executado", "time": round(time.time()-start,4)})
+        data = request.get_json()
+        codigo = data.get("code", "")
+        ok, msg = verificar_codigo(codigo)
+        if not ok:
+            return jsonify({"success": False, "error": msg})
 
-# ---------------------------
-# SALVAR CÓDIGO
-# ---------------------------
+        buffer = io.StringIO()
+        old_stdout = sys.stdout
+        sys.stdout = buffer
+        try:
+            exec(codigo, {"__builtins__": {}})
+        finally:
+            sys.stdout = old_stdout
+
+        output = buffer.getvalue()
+        execution_time = round(time.time() - start_time, 4)
+        return jsonify({"success": True, "result": output if output else "✔ Executado com sucesso", "time": execution_time})
+    except Exception:
+        erro = traceback.format_exc()
+        return jsonify({"success": False, "error": "Erro na execução", "debug": erro})
+
+# -------------------------
+# Salvar código e histórico
+# -------------------------
+def carregar_historico():
+    if os.path.exists(HISTORY_FILE):
+        with open(HISTORY_FILE, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def salvar_historico(email, codigo):
+    historico = carregar_historico()
+    if email not in historico:
+        historico[email] = []
+    historico[email].append({"codigo": codigo, "timestamp": int(time.time())})
+    with open(HISTORY_FILE, "w", encoding="utf-8") as f:
+        json.dump(historico, f, ensure_ascii=False, indent=2)
+
 @app.route("/save", methods=["POST"])
 def save_code():
-    if "user" not in session: return jsonify({"success": False, "error":"Faça login primeiro"})
     data = request.get_json()
-    codigo, email = data.get("code"), data.get("email")
-    if not codigo or not email: return jsonify({"success": False, "error":"Código ou e-mail não enviado"})
-    user_dir = os.path.join("history", email.replace("@","_"))
-    os.makedirs(user_dir, exist_ok=True)
-    file_path = os.path.join(user_dir, f"codigo_{int(time.time())}.txt")
-    with open(file_path,"w",encoding="utf-8") as f: f.write(codigo)
-    return jsonify({"success": True, "message":"Código salvo com sucesso!"})
+    codigo = data.get("code", "")
+    email = data.get("email", "anonimo")
+    if not codigo:
+        return jsonify({"success": False, "error": "Código vazio"})
+    safe_email = email.replace("@", "_at_").replace(".", "_")
+    filename = os.path.join(SAVE_DIR, f"{safe_email}_{int(time.time())}.txt")
+    with open(filename, "w", encoding="utf-8") as f:
+        f.write(codigo)
+    salvar_historico(email, codigo)
+    return jsonify({"success": True})
 
-# ---------------------------
-# ERROS
-# ---------------------------
-@app.errorhandler(404)
-def not_found(e): return jsonify({"error":"Rota não encontrada"}),404
-@app.errorhandler(500)
-def internal_error(e): return jsonify({"error":"Erro interno do servidor"}),500
+@app.route("/history/<email>")
+def ver_historico(email):
+    historico = carregar_historico()
+    return jsonify(historico.get(email, []))
 
-# ---------------------------
-# START
-# ---------------------------
-if __name__=="__main__":
-    os.makedirs("history", exist_ok=True)
-    app.run(host="0.0.0.0", port=int(os.environ.get("PORT",80)))
+# -------------------------
+# Front-end
+# -------------------------
+@app.route("/", defaults={"path": ""})
+@app.route("/<path:path>")
+def index(path):
+    return send_from_directory(".", "index.html")
+
+# -------------------------
+# Start
+# -------------------------
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 80))
+    print(f"🚀 LogicStart IDE profissional iniciando na porta {port}")
+    app.run(host="0.0.0.0", port=port)
