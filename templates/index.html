@@ -3,145 +3,175 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart IDE Profissional</title>
+<title>LogicStart IDE</title>
 <style>
-body { font-family: 'Segoe UI', sans-serif; background: #181818; color: #e0e0e0; margin: 0; padding: 0; }
-header { padding: 10px 20px; background: #222; display: flex; justify-content: space-between; align-items: center; }
-header h1 { margin: 0; font-size: 1.4em; }
-.btn { background: #3a78d7; color: white; border: none; padding: 6px 12px; margin-left: 5px; cursor: pointer; border-radius: 3px; font-size: 0.9em; }
+/* Reset e corpo */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #181818;
+    color: #e0e0e0;
+}
+
+/* Container central */
+#main-container {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+/* Login Box */
+.login-box {
+    background: #222;
+    padding: 40px;
+    border-radius: 10px;
+    text-align: center;
+    width: 320px;
+    display: none;
+}
+.login-box.active { display: block; }
+
+.login-box h2 { margin-bottom: 20px; }
+.input-field {
+    width: 100%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: #e0e0e0;
+}
+.btn {
+    width: 100%;
+    background: #3a78d7;
+    color: white;
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    font-size: 1em;
+    border-radius: 5px;
+    margin-top: 10px;
+    transition: 0.2s;
+}
 .btn:hover { background: #2b5ea0; }
-#editor { width: 100%; height: 280px; background: #1e1e1e; color: #e0e0e0; font-family: monospace; font-size: 14px; padding: 10px; border: none; resize: none; outline: none; }
-#output { width: 100%; height: 130px; background: #1f1f1f; color: #a0ffa0; font-family: monospace; font-size: 14px; padding: 10px; overflow-y: auto; margin-top: 10px; border: 1px solid #333; }
-#actions { margin-top: 10px; }
-#autocomplete { position: absolute; background: #252525; color: #e0e0e0; border: 1px solid #3a78d7; display: none; max-height: 150px; overflow-y: auto; font-family: monospace; z-index: 1000; font-size: 14px; }
-.ac-item { padding: 2px 5px; cursor: pointer; }
-.ac-item:hover, .ac-selected { background: #3a78d7; }
-.keyword { color: #89ddff; }
+.oauth-btn { background: #ff5555; margin-top: 5px; }
+.oauth-btn:hover { background: #cc4444; }
+
+/* IDE Box */
+#ide-box {
+    display: none;
+    flex-direction: column;
+    width: 90%;
+    max-width: 1000px;
+}
+#ide-box.active { display: flex; }
+
+#ide-box textarea {
+    width: 100%;
+    height: 300px;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    border: none;
+    border-radius: 5px;
+    padding: 10px;
+    font-family: monospace;
+    resize: vertical;
+}
+#ide-box .controls {
+    margin-top: 10px;
+    display: flex;
+    gap: 10px;
+}
+.output {
+    margin-top: 10px;
+    background: #111;
+    padding: 10px;
+    border-radius: 5px;
+    min-height: 100px;
+    white-space: pre-wrap;
+    font-family: monospace;
+}
 </style>
 </head>
 <body>
-<header>
-<h1>LogicStart IDE Profissional</h1>
-<div id="user-actions">
-<button class="btn" onclick="login('google')">Login Google</button>
-<button class="btn" onclick="login('discord')">Login Discord</button>
-</div>
-</header>
+<div id="main-container">
 
-<main style="padding: 20px; position: relative;">
-<textarea id="editor" placeholder="Escreva seu código aqui..." spellcheck="false"></textarea>
-<div id="autocomplete"></div>
-<div id="actions">
-<button class="btn" onclick="executarCodigo()">Executar</button>
-<button class="btn" onclick="salvarCodigo()" id="save-btn" style="display:none;">Salvar</button>
+    <!-- LOGIN -->
+    <div class="login-box active" id="login-box">
+        <h2>Entrar na LogicStart</h2>
+        <input class="input-field" type="email" placeholder="Email" id="email">
+        <input class="input-field" type="password" placeholder="Senha" id="senha">
+        <button class="btn" onclick="loginEmail()">Entrar</button>
+        <button class="btn oauth-btn" onclick="loginGoogle()">Entrar com Google</button>
+    </div>
+
+    <!-- IDE -->
+    <div id="ide-box">
+        <textarea id="codigo" placeholder="Escreva seu código aqui..."></textarea>
+        <div class="controls">
+            <button class="btn" onclick="executar()">Executar</button>
+            <button class="btn" onclick="salvar()">Salvar</button>
+            <button class="btn" onclick="logout()">Sair</button>
+        </div>
+        <div class="output" id="saida"></div>
+    </div>
+
 </div>
-<div id="output"></div>
-</main>
 
 <script>
-// ================================
-// Autocomplete avançado
-// ================================
-const keywords = ["variavel","imprimir","se","senao","enquanto","para","funcao","retorna","classe","importa","tente","exceto"];
-const editor = document.getElementById("editor");
-const acBox = document.getElementById("autocomplete");
-let selectedIndex = -1;
-
-editor.addEventListener("input", updateAutocomplete);
-editor.addEventListener("keydown", navigateAutocomplete);
-
-function updateAutocomplete(){
-    const cursorPos = editor.selectionStart;
-    const text = editor.value.slice(0,cursorPos);
-    const match = text.match(/(\w+)$/);
-    if(!match){ acBox.style.display="none"; return; }
-    const prefix = match[1];
-    const suggestions = keywords.filter(k=>k.startsWith(prefix));
-    if(suggestions.length===0){ acBox.style.display="none"; return; }
-
-    acBox.innerHTML = suggestions.map((s,i)=>`<div class="ac-item" data-index="${i}">${s}</div>`).join("");
-    acBox.style.display="block";
-    acBox.style.left = editor.offsetLeft + "px";
-    acBox.style.top = (editor.offsetTop + editor.offsetHeight) + "px";
-    selectedIndex=-1;
-
-    document.querySelectorAll(".ac-item").forEach(item=>{
-        item.addEventListener("mousedown",(ev)=>{ ev.preventDefault(); insertAutocomplete(item.textContent); });
+function loginEmail() {
+    const email = document.getElementById("email").value;
+    const senha = document.getElementById("senha").value;
+    if(!email || !senha){ alert("Preencha todos os campos!"); return; }
+    fetch("/login/email",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({email, senha})
+    }).then(res=>res.json()).then(data=>{
+        if(data.success){ 
+            document.getElementById("login-box").classList.remove("active");
+            document.getElementById("ide-box").classList.add("active");
+        } else alert(data.error);
     });
 }
 
-function navigateAutocomplete(e){
-    const items=document.querySelectorAll(".ac-item");
-    if(acBox.style.display==="none"||items.length===0) return;
-
-    if(e.key==="ArrowDown"){ e.preventDefault(); selectedIndex=(selectedIndex+1)%items.length; highlightItem(items); }
-    else if(e.key==="ArrowUp"){ e.preventDefault(); selectedIndex=(selectedIndex-1+items.length)%items.length; highlightItem(items); }
-    else if(e.key==="Enter"){ if(selectedIndex>=0){ e.preventDefault(); insertAutocomplete(items[selectedIndex].textContent); } }
-    else if(e.key==="Escape"){ acBox.style.display="none"; }
-}
-
-function highlightItem(items){ items.forEach((i,idx)=>i.style.background=idx===selectedIndex?"#3a78d7":"#252525"); }
-function insertAutocomplete(word){
-    const cursorPos=editor.selectionStart;
-    const textBefore=editor.value.slice(0,cursorPos).replace(/\w+$/,"");
-    const textAfter=editor.value.slice(cursorPos);
-    editor.value=textBefore+word+textAfter;
-    editor.selectionStart=editor.selectionEnd=textBefore.length+word.length;
-    acBox.style.display="none";
-    editor.focus();
-}
-
-// ================================
-// Login & Logout
-// ================================
-let user=null;
-function login(provider){ window.location.href=`/login/${provider}`; }
-function logout(){ fetch("/logout").then(()=>window.location.reload()); }
-
-// ================================
-// Executar código
-// ================================
-function executarCodigo(){
-    const code=editor.value;
-    document.getElementById("output").textContent="Executando...";
-    fetch("/run",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code}) })
-    .then(res=>res.json()).then(data=>{
-        if(data.success){ document.getElementById("output").textContent=data.result + `\n[Tempo: ${data.time}s]`; }
-        else{ document.getElementById("output").textContent=`Erro: ${data.error}\n${data.debug||""}`; }
+function loginGoogle() {
+    fetch("/login/google").then(()=> {
+        document.getElementById("login-box").classList.remove("active");
+        document.getElementById("ide-box").classList.add("active");
     });
 }
 
-// ================================
-// Salvar código (Histórico por e-mail)
-// ================================
-function salvarCodigo(){
-    const code=editor.value;
-    const email = prompt("Digite seu e-mail para salvar o código:");
-    if(!email) return alert("E-mail obrigatório!");
-    fetch("/save",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code,email}) })
-    .then(res=>res.json()).then(data=>{
-        if(data.success) alert("Código salvo com sucesso!");
-        else alert(`Erro: ${data.error}`);
+function executar(){
+    const codigo = document.getElementById("codigo").value;
+    fetch("/run",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({code: codigo})
+    }).then(res=>res.json()).then(data=>{
+        document.getElementById("saida").textContent = data.success ? data.result : data.error;
     });
 }
 
-// ================================
-// Inicialização
-// ================================
-window.onload=()=>{
-    fetch("/health").then(res=>res.json()).then(data=>{
-        if(window.user){ updateUI(); }
+function salvar(){
+    const codigo = document.getElementById("codigo").value;
+    const email = prompt("Digite seu e-mail para salvar:");
+    if(!email){ return; }
+    fetch("/save",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({code: codigo, email: email})
+    }).then(res=>res.json()).then(data=>{
+        alert(data.success ? "Código salvo!" : data.error);
     });
-};
+}
 
-function updateUI(){
-    if(user){
-        document.getElementById("save-btn").style.display="inline-block";
-        document.getElementById("user-actions").innerHTML=`
-            Logado como <strong>${user.name}</strong>
-            <button class="btn" onclick="logout()">Logout</button>
-        `;
-    }
+function logout(){
+    fetch("/logout").then(()=>{
+        document.getElementById("ide-box").classList.remove("active");
+        document.getElementById("login-box").classList.add("active");
+    });
 }
 </script>
 </body>
