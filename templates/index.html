@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>LogicStart IDE</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <style>
+        body {
+            margin: 0;
+            background: #0f172a;
+            color: #e2e8f0;
+            font-family: Arial;
+        }
+
+        header {
+            background: #020617;
+            padding: 15px;
+            font-size: 20px;
+            text-align: center;
+            color: #38bdf8;
+            border-bottom: 1px solid #1e293b;
+        }
+
+        .container {
+            display: flex;
+            height: 90vh;
+        }
+
+        textarea {
+            width: 50%;
+            padding: 15px;
+            background: #020617;
+            color: #22c55e;
+            border: none;
+            outline: none;
+            font-family: monospace;
+            font-size: 14px;
+        }
+
+        .output {
+            width: 50%;
+            padding: 15px;
+            background: #020617;
+            border-left: 1px solid #1e293b;
+            overflow-y: auto;
+        }
+
+        button {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            padding: 12px 20px;
+            background: #38bdf8;
+            border: none;
+            color: black;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 8px;
+        }
+
+        button:hover {
+            background: #0ea5e9;
+        }
+    </style>
+</head>
+
+<body>
+
+<header>🚀 LogicStart IDE</header>
+
+<div class="container">
+    <textarea id="code">
+print("Olá, mundo!")
+    </textarea>
+
+    <div class="output" id="output">
+Resultado aparecerá aqui...
+    </div>
+</div>
+
+<button onclick="runCode()">▶ Executar</button>
+
+<script>
+async function runCode() {
+    const code = document.getElementById("code").value;
+    const output = document.getElementById("output");
+
+    output.innerText = "⏳ Executando...";
+
+    try {
+        const response = await fetch("/run", {
+            method: "POST",
+            headers: {"Content-Type": "application/json"},
+            body: JSON.stringify({code})
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            output.innerText = data.result + "\\n\\n⏱ Tempo: " + data.time + "s";
+        } else {
+            output.innerText = "❌ " + data.error;
+            if (data.debug) {
+                output.innerText += "\\n\\n" + data.debug;
+            }
+        }
+
+    } catch (err) {
+        output.innerText = "💥 Erro de conexão com o servidor";
+    }
+}
+</script>
+
+</body>
+</html>
