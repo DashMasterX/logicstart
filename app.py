@@ -1,7 +1,6 @@
-from flask import Flask, request, jsonify, send_from_directory
+from flask import Flask, request, jsonify, render_template
 from flask_cors import CORS
 import os, io, sys, time, traceback, json
-
 from executor import Executor
 
 app = Flask(__name__)
@@ -104,7 +103,7 @@ def ver_historico(email):
 @app.route("/", defaults={"path": ""})
 @app.route("/<path:path>")
 def index(path):
-    return send_from_directory(".", "index.html")
+    return render_template("index.html")
 
 # -----------------------------
 # START
