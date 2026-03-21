@@ -1,88 +1,82 @@
-import ast
-import operator
+# engine.py - LogicStart Engine Profissional Nível Steam
+import re
+from errors import LogicStartErro
 
-# =========================
-# EXCEÇÕES
-# =========================
-class LogicStartErro(Exception):
-    pass
-
-# =========================
-# EXECUTOR
-# =========================
 class LogicStart:
-    def __init__(self, codigo: str):
+    def __init__(self, codigo):
         self.codigo = codigo
-        self.vars = {}      # Armazena variáveis
-        self.consts = {}    # Armazena constantes
-        self.functions = {} # Armazena funções
-        self.classes = {}   # Armazena classes
+        self.variaveis = {}  # memória de variáveis
+        self.funcoes = {}    # memória de funções
+        self.saida = []
 
-    # =========================
-    # EXECUTAR
-    # =========================
     def executar(self):
-        linhas = [l.strip() for l in self.codigo.split('\n') if l.strip()]
+        linhas = self.codigo.split("\n")
         for i, linha in enumerate(linhas, 1):
+            linha = linha.strip()
+            if not linha or linha.startswith("//"):
+                continue
             try:
                 self._executar_linha(linha)
             except Exception as e:
-                raise LogicStartErro(f"Linha {i}: {e}")
+                raise LogicStartErro(f"Erro na linha {i}: {linha}\n{e}")
 
-    # =========================
-    # PARSER SIMPLIFICADO
-    # =========================
     def _executar_linha(self, linha):
-        # Comentário
-        if linha.startswith("//"):
+        # =========================
+        # imprimir("texto")
+        # =========================
+        match = re.match(r'imprimir\((.*)\)', linha)
+        if match:
+            valor = self._avaliar(match.group(1))
+            print(valor)
+            self.saida.append(str(valor))
             return
 
-        # Variável
-        if linha.startswith("variavel "):
-            nome, valor = self._parse_assign(linha[8:])
-            self.vars[nome] = valor
+        # =========================
+        # declaração de variáveis
+        # =========================
+        match = re.match(r'(variavel|constante)\s+([a-zA-Z_]\w*)\s*=\s*(.+)', linha)
+        if match:
+            _, nome, expr = match.groups()
+            self.variaveis[nome] = self._avaliar(expr)
             return
 
-        # Constante
-        if linha.startswith("constante "):
-            nome, valor = self._parse_assign(linha[10:])
-            self.consts[nome] = valor
+        # =========================
+        # atribuição simples
+        # =========================
+        match = re.match(r'([a-zA-Z_]\w*)\s*=\s*(.+)', linha)
+        if match:
+            nome, expr = match.groups()
+            if nome not in self.variaveis:
+                raise LogicStartErro(f"Variável não declarada: {nome}")
+            self.variaveis[nome] = self._avaliar(expr)
             return
 
-        # Impressão
-        if linha.startswith("imprima(") and linha.endswith(")"):
-            conteudo = linha[8:-1]
-            print(self._avaliar_expressao(conteudo))
+        # =========================
+        # funções simples
+        # =========================
+        match = re.match(r'função\s+([a-zA-Z_]\w*)\s*\(\)\s*\{', linha)
+        if match:
+            nome = match.group(1)
+            # placeholder para funções futuras
+            self.funcoes[nome] = "função"
             return
 
-        # Retorno
-        if linha.startswith("retorne "):
-            valor = self._avaliar_expressao(linha[7:])
-            raise LogicStartErro(f"retorne usado fora de função: {valor}")
+        # =========================
+        # comandos lógicos básicos (placeholder)
+        # =========================
+        if linha in ["pare", "fim"]:
+            return
 
-        # TODO: Funções, classes, loops, condicionais
-        # Para simplificação inicial, apenas variáveis, constantes e impressão
         raise LogicStartErro(f"Comando desconhecido: {linha}")
 
-    # =========================
-    # ASSIGNMENT PARSER
-    # =========================
-    def _parse_assign(self, texto):
-        if "=" not in texto:
-            raise LogicStartErro("Atribuição inválida")
-        partes = texto.split("=",1)
-        nome = partes[0].strip()
-        valor = self._avaliar_expressao(partes[1].strip())
-        return nome, valor
-
-    # =========================
-    # AVALIAR EXPRESSÃO
-    # =========================
-    def _avaliar_expressao(self, expr):
-        # Substitui variáveis e constantes
-        for nome, valor in {**self.vars, **self.consts}.items():
-            expr = expr.replace(nome, str(valor))
+    def _avaliar(self, expr):
+        # substitui variáveis pelo valor
+        for var in self.variaveis:
+            expr = re.sub(r'\b{}\b'.format(var), str(self.variaveis[var]), expr)
+        # operadores lógicos em português
+        expr = expr.replace("e", "and").replace("ou", "or").replace("não", "not")
+        # avalia expressão com segurança
         try:
-            return eval(expr, {"__builtins__": {}}, {})
-        except Exception:
-            return expr  # Retorna string literal se não for número/expressão
+            return eval(expr, {"__builtins__": {}})
+        except Exception as e:
+            raise LogicStartErro(f"Erro ao avaliar expressão: {expr}\n{e}")
