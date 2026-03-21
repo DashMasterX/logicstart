@@ -5,14 +5,73 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Login - LogicStart IDE</title>
 <style>
-body { margin:0; font-family:'Segoe UI',sans-serif; background:#181818; color:#e0e0e0; display:flex; justify-content:center; align-items:center; height:100vh; }
-.login-box { background:#222; padding:40px; border-radius:10px; text-align:center; width:320px; }
-h2 { margin-bottom:20px; }
-.input-field { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #555; background:#1e1e1e; color:#e0e0e0; }
-.btn { width:100%; background:#3a78d7; color:white; border:none; padding:12px; cursor:pointer; font-size:1em; border-radius:5px; margin-top:10px; transition:.2s; }
-.btn:hover { background:#2b5ea0; }
-.oauth-btn { background:#ff5555; margin-top:5px; }
-.oauth-btn:hover { background:#cc4444; }
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #181818;
+    color: #e0e0e0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
+
+.login-box {
+    background: #222;
+    padding: 40px;
+    border-radius: 12px;
+    text-align: center;
+    width: 320px;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.5);
+}
+
+h2 {
+    margin-bottom: 20px;
+    font-weight: 600;
+}
+
+.input-field {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: 1px solid #555;
+    background: #1e1e1e;
+    color: #e0e0e0;
+    font-size: 16px;
+}
+
+.btn {
+    width: 100%;
+    background: #3a78d7;
+    color: white;
+    border: none;
+    padding: 12px;
+    cursor: pointer;
+    font-size: 16px;
+    border-radius: 6px;
+    margin-top: 10px;
+    transition: background 0.2s;
+}
+
+.btn:hover {
+    background: #2b5ea0;
+}
+
+.oauth-btn {
+    background: #ff5555;
+}
+
+.oauth-btn:hover {
+    background: #cc4444;
+}
+
+small {
+    display: block;
+    margin-top: 15px;
+    color: #aaa;
+    font-size: 13px;
+}
 </style>
 </head>
 <body>
@@ -22,19 +81,38 @@ h2 { margin-bottom:20px; }
     <input class="input-field" type="password" placeholder="Senha" id="senha">
     <button class="btn" onclick="loginEmail()">Entrar</button>
     <button class="btn oauth-btn" onclick="loginGoogle()">Entrar com Google</button>
+    <small>Você também pode usar o IDE sem login.</small>
 </div>
+
 <script>
 function loginEmail() {
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
-    if(!email||!senha){alert("Preencha todos os campos!"); return;}
-    fetch("/login/email",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({email,senha})})
-    .then(res=>res.json()).then(data=>{
-        if(data.success){ window.location.href="/ide"; }
-        else alert(data.error);
-    });
+
+    if(!email || !senha) {
+        alert("Preencha todos os campos!");
+        return;
+    }
+
+    fetch("/login/email", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email, senha})
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success) {
+            window.location.href = "/ide"; // redireciona para a IDE
+        } else {
+            alert(data.error);
+        }
+    })
+    .catch(err => alert("Erro na conexão com o servidor"));
 }
-function loginGoogle(){ window.location.href="/login/google"; }
+
+function loginGoogle() {
+    window.location.href = "/login/google";
+}
 </script>
 </body>
 </html>
