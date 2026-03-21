@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>LogicStart IDE</title>
+<style>
+body { margin:0; font-family:'Segoe UI',sans-serif; background:#181818; color:#e0e0e0; }
+header { background:#222; padding:15px; text-align:center; font-size:1.5em; }
+.container { padding:20px; }
+textarea { width:100%; height:300px; background:#1e1e1e; color:#e0e0e0; border:none; border-radius:5px; padding:10px; font-family:monospace; }
+.btn { background:#3a78d7; color:white; border:none; padding:10px 20px; margin-top:10px; cursor:pointer; border-radius:5px; }
+.btn:hover { background:#2b5ea0; }
+.output { margin-top:10px; background:#111; padding:10px; border-radius:5px; min-height:100px; white-space:pre-wrap; font-family:monospace; }
+</style>
+</head>
+<body>
+<header>LogicStart IDE</header>
+<div class="container">
+<textarea id="codigo" placeholder="Escreva seu código aqui..."></textarea>
+<button class="btn" onclick="executar()">Executar</button>
+<button class="btn" onclick="salvar()">Salvar</button>
+<div class="output" id="saida"></div>
+</div>
+<script>
+function executar(){
+    const codigo = document.getElementById("codigo").value;
+    fetch("/run",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code:codigo})})
+    .then(res=>res.json()).then(data=>{
+        document.getElementById("saida").textContent = data.success ? data.result : data.error;
+    });
+}
+function salvar(){
+    const codigo = document.getElementById("codigo").value;
+    const email = prompt("Digite seu e-mail para salvar:");
+    if(!email){ return; }
+    fetch("/save",{method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code:codigo,email})})
+    .then(res=>res.json()).then(data=>{
+        alert(data.success? "Código salvo!" : data.error);
+    });
+}
+</script>
+</body>
+</html>
