@@ -1,72 +1,66 @@
-from flask import Flask, render_template, request, jsonify
-from engine import LogicStart
-from errors import LogicStartErro
-from security import Security
+# app.py
+from flask import Flask, render_template, request, jsonify, session
+import io, sys, time, traceback, logging, os, threading
 
-import io
-import sys
-import traceback
-import time
-import os
-import logging
-from functools import wraps
-
-# =========================
-# CONFIGURAÇÃO APP
-# =========================
+# -----------------------------
+# Configurações Profissionais
+# -----------------------------
 app = Flask(__name__)
-MAX_CODE_SIZE = 5000  # Limite de caracteres
+app.secret_key = os.environ.get("SECRET_KEY", "supersecretkey123")
+MAX_CODE_SIZE = 5000
+EXEC_TIMEOUT = 2  # segundos
+BLACKLIST = ["import os", "exec(", "eval(", "__import__", "open(", "subprocess"]
 
-# =========================
-# LOGGING PROFISSIONAL
-# =========================
+logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("LogicStart")
-logger.setLevel(logging.INFO)
-formatter = logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s")
 
-console_handler = logging.StreamHandler(sys.stdout)
-console_handler.setFormatter(formatter)
-logger.addHandler(console_handler)
+# -----------------------------
+# Histórico de execuções
+# -----------------------------
+EXEC_HISTORY = {}
 
-# =========================
-# MIDDLEWARE
-# =========================
-@app.before_request
-def log_request():
-    logger.info(f"[REQ] {request.method} {request.path} from {request.remote_addr}")
+# -----------------------------
+# Funções de segurança
+# -----------------------------
+def verificar_codigo(codigo: str) -> bool:
+    """Bloqueia comandos perigosos"""
+    return all(palavra not in codigo for palavra in BLACKLIST)
 
-def execution_timer(func):
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-        start_time = time.time()
-        response = func(*args, **kwargs)
-        exec_time = round(time.time() - start_time, 4)
-        logger.info(f"[EXEC TIME] {request.path} -> {exec_time}s")
-        return response
-    return wrapper
+# -----------------------------
+# Execução segura com timeout
+# -----------------------------
+def executar_codigo(codigo: str, buffer: io.StringIO):
+    try:
+        exec(codigo, {"__builtins__": {}})
+    except Exception as e:
+        buffer.write(f"💥 Erro: {e}")
 
-# =========================
-# ROTAS
-# =========================
+def run_with_timeout(codigo: str, timeout: int = EXEC_TIMEOUT) -> str:
+    buffer = io.StringIO()
+    thread = threading.Thread(target=executar_codigo, args=(codigo, buffer))
+    thread.start()
+    thread.join(timeout)
+    if thread.is_alive():
+        return "⏱ Código excedeu o tempo limite"
+    return buffer.getvalue() or "✔ Executado com sucesso"
+
+# -----------------------------
+# Rotas principais
+# -----------------------------
 @app.route("/")
 def home():
     try:
         return render_template("index.html")
-    except Exception as e:
-        logger.error(f"Falha ao renderizar index.html: {e}")
-        return "LogicStart ONLINE 🚀"
+    except Exception:
+        return "LogicStart IDE Online 🚀"
 
 @app.route("/health")
 def health():
-    return jsonify({
-        "status": "online",
-        "service": "LogicStart",
-        "time": time.time()
-    })
+    return jsonify({"status": "online", "service": "LogicStart", "time": time.time()})
 
 @app.route("/run", methods=["POST"])
-@execution_timer
 def run_code():
+    start_time = time.time()
     try:
         data = request.get_json()
         if not data or "code" not in data:
@@ -74,70 +68,61 @@ def run_code():
 
         codigo = data["code"]
 
-        # =========================
-        # SEGURANÇA
-        # =========================
         if len(codigo) > MAX_CODE_SIZE:
             return error_response("Código muito grande")
-        if not Security().verificar(codigo):
+        if not verificar_codigo(codigo):
             return error_response("Código bloqueado por segurança")
 
-        # =========================
-        # EXECUÇÃO ISOLADA
-        # =========================
-        buffer = io.StringIO()
-        old_stdout = sys.stdout
-        sys.stdout = buffer
-        try:
-            logic = LogicStart(codigo)
-            logic.executar()
-        finally:
-            sys.stdout = old_stdout
+        output = run_with_timeout(codigo)
+        execution_time = round(time.time() - start_time, 4)
+        logger.info(f"[EXEC] Tempo: {execution_time}s | Saída: {output[:50]}")
 
-        output = buffer.getvalue() or "✔ Executado com sucesso"
-        return jsonify({
-            "success": True,
-            "result": output
+        # Identifica usuário único (IP + session)
+        user_id = session.get("user_id", request.remote_addr)
+        if user_id not in EXEC_HISTORY:
+            EXEC_HISTORY[user_id] = []
+        EXEC_HISTORY[user_id].append({
+            "code": codigo,
+            "result": output,
+            "time": execution_time,
+            "timestamp": time.time()
         })
+        # Mantém apenas últimas 20 execuções
+        EXEC_HISTORY[user_id] = EXEC_HISTORY[user_id][-20:]
 
-    except LogicStartErro as e:
-        logger.warning(f"[LOGIC ERROR] {e}")
-        return error_response(str(e))
+        return jsonify({"success": True, "result": output, "time": execution_time})
+
     except Exception:
         erro = traceback.format_exc()
-        logger.error(f"[CRASH] {erro}")
+        logger.error(f"[CRASH]\n{erro}")
         return error_response("Erro interno", debug=erro)
 
-# =========================
-# FUNÇÕES AUXILIARES
-# =========================
-def error_response(msg, debug=None):
-    return jsonify({
-        "success": False,
-        "error": msg,
-        "debug": debug
-    }), 400
+@app.route("/history")
+def history():
+    user_id = session.get("user_id", request.remote_addr)
+    return jsonify({"history": EXEC_HISTORY.get(user_id, [])})
 
-# =========================
-# HANDLERS GLOBAIS
-# =========================
+# -----------------------------
+# Função de erro
+# -----------------------------
+def error_response(msg, debug=None):
+    return jsonify({"success": False, "error": msg, "debug": debug})
+
+# -----------------------------
+# Handlers globais
+# -----------------------------
 @app.errorhandler(404)
 def not_found(e):
-    logger.warning(f"404: {request.path}")
-    return jsonify({"success": False, "error": "Rota não encontrada"}), 404
+    return jsonify({"error": "Rota não encontrada"}), 404
 
 @app.errorhandler(500)
 def internal_error(e):
-    logger.critical(f"500: {request.path} - {e}")
-    return jsonify({"success": False, "error": "Erro interno do servidor"}), 500
+    return jsonify({"error": "Erro interno do servidor"}), 500
 
-# =========================
-# START CLOUD/LOCAL
-# =========================
+# -----------------------------
+# Start do servidor (Cloud Ready)
+# -----------------------------
 if __name__ == "__main__":
-    try:
-        port = int(os.environ.get("PORT", 80))
-        logger.info(f"🚀 Iniciando LogicStart na porta {port}")
-        app.run(host="0.0.0.0", port=port)
-    except Exception as e:
-        logger.critical(f"Falha ao iniciar: {e}")
+    port = int(os.environ.get("PORT", 80))
+    logger.info(f"🚀 LogicStart iniciando na porta {port}")
+    app.run(host="0.0.0.0", port=port, threaded=True)
