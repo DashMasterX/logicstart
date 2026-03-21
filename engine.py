@@ -1,38 +1,19 @@
 # engine.py
+from lexer import Lexer
 from parser import Parser
 from executor import Executor
 from errors import LogicStartErro
 
 class LogicStart:
-    """
-    Motor principal da linguagem LogicStart (português)
-    """
     def __init__(self, codigo):
         self.codigo = codigo
-        self.parser = Parser(codigo)
-        self.executor = Executor()
-        self.ast = None
-
-    def compilar(self):
-        try:
-            self.ast = self.parser.parse()
-        except LogicStartErro as e:
-            raise LogicStartErro(f"Erro de compilação: {e}")
-        except Exception as e:
-            raise LogicStartErro(f"Erro inesperado na compilação: {e}")
 
     def executar(self):
-        if not self.ast:
-            self.compilar()
-        try:
-            self.executor.executar(self.ast)
-        except LogicStartErro as e:
-            raise LogicStartErro(f"Erro de execução: {e}")
-        except Exception as e:
-            raise LogicStartErro(f"Erro inesperado na execução: {e}")
+        # Lexer
+        tokens = Lexer(self.codigo).gerar_tokens()
 
-    def resultado(self):
-        """
-        Retorna tudo que foi impresso pelo código
-        """
-        return "\n".join(self.executor.output)
+        # Parser
+        ast = Parser(tokens).parse()
+
+        # Executor
+        Executor(ast).executar()
