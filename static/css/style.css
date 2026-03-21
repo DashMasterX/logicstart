@@ -1,7 +1,7 @@
 body {
     font-family: 'Roboto', sans-serif;
     background-color: #0b0f17;
-    color: #ffffff;
+    color: #fff;
     margin: 0;
     padding: 0;
 }
@@ -16,13 +16,17 @@ header {
 
 main {
     padding: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
 }
 
-#editor {
+textarea {
     width: 100%;
+    max-width: 600px;
     height: 250px;
     background-color: #141823;
-    color: #ffffff;
+    color: #fff;
     border-radius: 10px;
     padding: 10px;
     font-family: monospace;
@@ -30,13 +34,9 @@ main {
     resize: none;
 }
 
-.buttons {
-    margin: 10px 0;
-}
-
 button {
     padding: 10px 20px;
-    margin-right: 10px;
+    margin: 10px 0;
     background-color: #3abaff;
     color: #000;
     border: none;
@@ -48,12 +48,31 @@ button:hover {
     background-color: #5ec6ff;
 }
 
-#output {
+pre {
+    width: 100%;
+    max-width: 600px;
     background-color: #141823;
     color: #0fff00;
     border-radius: 10px;
     padding: 10px;
-    min-height: 100px;
+    min-height: 150px;
     font-family: monospace;
     font-size: 14px;
+}
+
+#editor-container, #output-container {
+    width: 100%;
+    max-width: 600px;
+    transition: all 0.5s ease;
+}
+
+.fade-in {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.fade-out {
+    opacity: 0;
+    transform: translateY(-50px);
+    pointer-events: none;
 }
