@@ -1,74 +1,70 @@
 # lexer.py
 import re
-from errors import LogicStartErro
 
 class Token:
-    def __init__(self, tipo, valor, linha=0, coluna=0):
+    def __init__(self, tipo, valor, linha, coluna):
         self.tipo = tipo
         self.valor = valor
         self.linha = linha
         self.coluna = coluna
 
     def __repr__(self):
-        return f"<Token {self.tipo}: {self.valor} ({self.linha}:{self.coluna})>"
+        return f"Token({self.tipo}, {self.valor}, {self.linha}:{self.coluna})"
 
 class Lexer:
-    """
-    Lexer profissional para a linguagem LogicStart (português)
-    """
-
-    # Palavras-chave da linguagem
-    PALAVRAS_CHAVE = {
-        "variavel", "constante", "função", "retorna",
-        "se", "senão", "enquanto", "para", "imprimir",
-        "verdadeiro", "falso", "nulo", "e", "ou", "não"
+    PALAVRAS_RESERVADAS = {
+        "var": "VAR",
+        "const": "CONST",
+        "se": "IF",
+        "senao": "ELSE",
+        "enquanto": "WHILE",
+        "imprimir": "PRINT",
+        "funcao": "FUNCTION",
+        "retornar": "RETURN",
+        "verdadeiro": "TRUE",
+        "falso": "FALSE",
+        "null": "NULL",
     }
 
-    # Expressões regulares para tokenização
-    TOKEN_REGEX = [
-        ("NUMERO", r"\d+(\.\d+)?"),
-        ("STRING", r"\".*?\"|'.*?'"),
-        ("IDENTIFICADOR", r"[A-Za-z_][A-Za-z0-9_]*"),
-        ("OPERADOR", r"[\+\-\*/%=<>!]+"),
-        ("PONTO", r"\."),
-        ("VIRGULA", r","),
-        ("DOIS_PONTOS", r":"),
-        ("ABRE_PAREN", r"\("),
-        ("FECHA_PAREN", r"\)"),
-        ("ABRE_CHAVE", r"\{"),
-        ("FECHA_CHAVE", r"\}"),
-        ("ESPACO", r"\s+"),
-        ("COMENTARIO", r"#.*?$"),
+    TOKEN_SPEC = [
+        ("NUM",       r"\d+(\.\d+)?"),
+        ("ID",        r"[a-zA-Z_][a-zA-Z0-9_]*"),
+        ("OP",        r"==|!=|>=|<=|>|<|\+|\-|\*|/|%|e|ou"),
+        ("ASSIGN",    r"="),
+        ("LPAREN",    r"\("),
+        ("RPAREN",    r"\)"),
+        ("LBRACE",    r"\{"),
+        ("RBRACE",    r"\}"),
+        ("SEMI",      r";"),
+        ("COMMA",     r","),
+        ("STRING",    r'"[^"]*"'),
+        ("NEWLINE",   r"\n"),
+        ("SKIP",      r"[ \t]+"),
+        ("MISMATCH",  r"."),
     ]
 
     def __init__(self, codigo):
         self.codigo = codigo
-        self.pos = 0
         self.linha = 1
         self.coluna = 1
         self.tokens = []
 
-    def tokenizar(self):
-        codigo = self.codigo
-        while self.pos < len(codigo):
-            match = None
-            for tipo, regex in self.TOKEN_REGEX:
-                pattern = re.compile(regex, re.MULTILINE)
-                match = pattern.match(codigo, self.pos)
-                if match:
-                    texto = match.group(0)
-                    if tipo == "IDENTIFICADOR" and texto in self.PALAVRAS_CHAVE:
-                        tipo = texto.upper()
-                    if tipo not in ("ESPACO", "COMENTARIO"):
-                        self.tokens.append(Token(tipo, texto, self.linha, self.coluna))
-                    linhas = texto.count("\n")
-                    if linhas:
-                        self.linha += linhas
-                        self.coluna = len(texto.rsplit("\n", 1)[-1]) + 1
-                    else:
-                        self.coluna += len(texto)
-                    self.pos = match.end()
-                    break
-            if not match:
-                raise LogicStartErro(f"Caractere inválido: '{codigo[self.pos]}' na linha {self.linha}, coluna {self.coluna}")
+    def gerar_tokens(self):
+        tok_regex = "|".join(f"(?P<{name}>{regex})" for name, regex in self.TOKEN_SPEC)
+        for mo in re.finditer(tok_regex, self.codigo):
+            tipo = mo.lastgroup
+            valor = mo.group()
+            if tipo == "NEWLINE":
+                self.linha += 1
+                self.coluna = 1
+                continue
+            elif tipo == "SKIP":
+                self.coluna += len(valor)
+                continue
+            elif tipo == "ID" and valor in self.PALAVRAS_RESERVADAS:
+                tipo = self.PALAVRAS_RESERVADAS[valor]
+            elif tipo == "MISMATCH":
+                raise RuntimeError(f"Token inválido {valor} na linha {self.linha}")
+            self.tokens.append(Token(tipo, valor, self.linha, self.coluna))
+            self.coluna += len(valor)
         return self.tokens
