@@ -1,70 +1,38 @@
 # engine.py
-from lexer import Lexer
 from parser import Parser
-from nodes import Program
+from executor import Executor
 from errors import LogicStartErro
 
 class LogicStart:
     """
-    Engine principal da linguagem LogicStart (versão profissional)
-    Traduz e executa código em português inspirado no JavaScript
+    Motor principal da linguagem LogicStart (português)
     """
-
-    def __init__(self, codigo: str):
-        if not codigo or not codigo.strip():
-            raise LogicStartErro("Código vazio não pode ser executado")
-        
+    def __init__(self, codigo):
         self.codigo = codigo
-        self.lexer = Lexer(codigo)
-        self.parser = Parser(self.lexer)
-        self.programa = None
-        self.output_buffer = []
+        self.parser = Parser(codigo)
+        self.executor = Executor()
+        self.ast = None
+
+    def compilar(self):
+        try:
+            self.ast = self.parser.parse()
+        except LogicStartErro as e:
+            raise LogicStartErro(f"Erro de compilação: {e}")
+        except Exception as e:
+            raise LogicStartErro(f"Erro inesperado na compilação: {e}")
 
     def executar(self):
-        """
-        Executa o código
-        """
+        if not self.ast:
+            self.compilar()
         try:
-            # Cria AST
-            self.programa = self.parser.parse()
-            
-            # Executa o programa
-            self._executar_nodo(self.programa)
+            self.executor.executar(self.ast)
         except LogicStartErro as e:
-            raise e
+            raise LogicStartErro(f"Erro de execução: {e}")
         except Exception as e:
-            raise LogicStartErro(f"Erro interno: {e}")
+            raise LogicStartErro(f"Erro inesperado na execução: {e}")
 
-    def _executar_nodo(self, nodo):
+    def resultado(self):
         """
-        Executa qualquer nodo da AST
+        Retorna tudo que foi impresso pelo código
         """
-        if nodo is None:
-            return None
-
-        metodo = f"_executar_{type(nodo).__name__}"
-        if hasattr(self, metodo):
-            return getattr(self, metodo)(nodo)
-        else:
-            # Nodo genérico
-            for filho in getattr(nodo, "filhos", []):
-                self._executar_nodo(filho)
-
-    # =========================
-    # Nodificação de saída
-    # =========================
-    def _executar_Program(self, nodo: Program):
-        for stmt in nodo.filhos:
-            self._executar_nodo(stmt)
-
-    def imprimir(self, valor):
-        """
-        Função para saída padrão (console)
-        """
-        self.output_buffer.append(str(valor))
-
-    def get_output(self):
-        """
-        Retorna o resultado da execução
-        """
-        return "\n".join(self.output_buffer)
+        return "\n".join(self.executor.output)
