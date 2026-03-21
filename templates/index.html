@@ -1,11 +1,10 @@
-<!DOCTYPE html>
+  <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LogicStart IDE</title>
 <style>
-/* Reset e corpo */
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
@@ -13,110 +12,51 @@ body {
     color: #e0e0e0;
 }
 
-/* Container central */
-#main-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
-}
-
-/* Login Box */
-.login-box {
+#login-canto {
+    position: absolute;
+    top: 20px;
+    right: 20px;
     background: #222;
-    padding: 40px;
-    border-radius: 10px;
-    text-align: center;
-    width: 320px;
-    display: none;
+    padding: 15px;
+    border-radius: 8px;
+    width: 220px;
+    box-shadow: 0 0 10px #000;
 }
-.login-box.active { display: block; }
+#login-canto h3 { margin: 0 0 10px 0; font-size: 1em; }
+#login-canto .input-field { width: 100%; padding: 8px; margin: 5px 0; border-radius: 5px; border: 1px solid #555; background: #1e1e1e; color: #e0e0e0; }
+#login-canto .btn { width: 100%; background: #3a78d7; color: white; border: none; padding: 10px; cursor: pointer; border-radius: 5px; margin-top: 5px; }
+#login-canto .btn:hover { background: #2b5ea0; }
+#login-canto .oauth-btn { background: #ff5555; }
+#login-canto .oauth-btn:hover { background: #cc4444; }
 
-.login-box h2 { margin-bottom: 20px; }
-.input-field {
-    width: 100%;
-    padding: 10px;
-    margin: 10px 0;
-    border-radius: 5px;
-    border: 1px solid #555;
-    background: #1e1e1e;
-    color: #e0e0e0;
-}
-.btn {
-    width: 100%;
-    background: #3a78d7;
-    color: white;
-    border: none;
-    padding: 12px;
-    cursor: pointer;
-    font-size: 1em;
-    border-radius: 5px;
-    margin-top: 10px;
-    transition: 0.2s;
-}
-.btn:hover { background: #2b5ea0; }
-.oauth-btn { background: #ff5555; margin-top: 5px; }
-.oauth-btn:hover { background: #cc4444; }
-
-/* IDE Box */
-#ide-box {
-    display: none;
-    flex-direction: column;
-    width: 90%;
-    max-width: 1000px;
-}
-#ide-box.active { display: flex; }
-
-#ide-box textarea {
-    width: 100%;
-    height: 300px;
-    background: #1e1e1e;
-    color: #e0e0e0;
-    border: none;
-    border-radius: 5px;
-    padding: 10px;
-    font-family: monospace;
-    resize: vertical;
-}
-#ide-box .controls {
-    margin-top: 10px;
-    display: flex;
-    gap: 10px;
-}
-.output {
-    margin-top: 10px;
-    background: #111;
-    padding: 10px;
-    border-radius: 5px;
-    min-height: 100px;
-    white-space: pre-wrap;
-    font-family: monospace;
-}
+/* IDE */
+#ide-container { padding: 20px; display: flex; flex-direction: column; max-width: 1200px; margin: auto; }
+#codigo { width: 100%; height: 400px; background: #1e1e1e; color: #e0e0e0; border: none; border-radius: 5px; padding: 10px; font-family: monospace; resize: vertical; }
+.controls { margin-top: 10px; display: flex; gap: 10px; flex-wrap: wrap; }
+.controls .btn { flex: 1; min-width: 100px; }
+#saida { margin-top: 15px; background: #111; padding: 10px; border-radius: 5px; min-height: 150px; white-space: pre-wrap; font-family: monospace; }
 </style>
 </head>
 <body>
-<div id="main-container">
 
-    <!-- LOGIN -->
-    <div class="login-box active" id="login-box">
-        <h2>Entrar na LogicStart</h2>
-        <input class="input-field" type="email" placeholder="Email" id="email">
-        <input class="input-field" type="password" placeholder="Senha" id="senha">
-        <button class="btn" onclick="loginEmail()">Entrar</button>
-        <button class="btn oauth-btn" onclick="loginGoogle()">Entrar com Google</button>
+<!-- Login opcional no canto -->
+<div id="login-canto">
+    <h3>Login (opcional)</h3>
+    <input class="input-field" type="email" placeholder="Email" id="email">
+    <input class="input-field" type="password" placeholder="Senha" id="senha">
+    <button class="btn" onclick="loginEmail()">Entrar</button>
+    <button class="btn oauth-btn" onclick="loginGoogle()">Google</button>
+</div>
+
+<!-- IDE principal -->
+<div id="ide-container">
+    <textarea id="codigo" placeholder="Escreva seu código aqui..."></textarea>
+    <div class="controls">
+        <button class="btn" onclick="executar()">Executar</button>
+        <button class="btn" onclick="salvar()">Salvar</button>
+        <button class="btn" onclick="logout()">Logout</button>
     </div>
-
-    <!-- IDE -->
-    <div id="ide-box">
-        <textarea id="codigo" placeholder="Escreva seu código aqui..."></textarea>
-        <div class="controls">
-            <button class="btn" onclick="executar()">Executar</button>
-            <button class="btn" onclick="salvar()">Salvar</button>
-            <button class="btn" onclick="logout()">Sair</button>
-        </div>
-        <div class="output" id="saida"></div>
-    </div>
-
+    <div id="saida"></div>
 </div>
 
 <script>
@@ -127,19 +67,17 @@ function loginEmail() {
     fetch("/login/email",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({email, senha})
+        body: JSON.stringify({email, senha})
     }).then(res=>res.json()).then(data=>{
-        if(data.success){ 
-            document.getElementById("login-box").classList.remove("active");
-            document.getElementById("ide-box").classList.add("active");
-        } else alert(data.error);
+        if(data.success) alert("Login feito com sucesso!");
+        else alert(data.error);
     });
 }
 
 function loginGoogle() {
-    fetch("/login/google").then(()=> {
-        document.getElementById("login-box").classList.remove("active");
-        document.getElementById("ide-box").classList.add("active");
+    fetch("/login/google").then(res=>res.json()).then(data=>{
+        if(data.success) alert("Login Google feito com sucesso!");
+        else alert("Falha no login Google");
     });
 }
 
@@ -148,7 +86,7 @@ function executar(){
     fetch("/run",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({code: codigo})
+        body: JSON.stringify({code: codigo})
     }).then(res=>res.json()).then(data=>{
         document.getElementById("saida").textContent = data.success ? data.result : data.error;
     });
@@ -157,11 +95,11 @@ function executar(){
 function salvar(){
     const codigo = document.getElementById("codigo").value;
     const email = prompt("Digite seu e-mail para salvar:");
-    if(!email){ return; }
+    if(!email) return;
     fetch("/save",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({code: codigo, email: email})
+        body: JSON.stringify({code: codigo, email})
     }).then(res=>res.json()).then(data=>{
         alert(data.success ? "Código salvo!" : data.error);
     });
@@ -169,10 +107,10 @@ function salvar(){
 
 function logout(){
     fetch("/logout").then(()=>{
-        document.getElementById("ide-box").classList.remove("active");
-        document.getElementById("login-box").classList.add("active");
+        alert("Logout efetuado!");
     });
 }
 </script>
+
 </body>
 </html>
