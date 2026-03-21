@@ -3,184 +3,146 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>🚀 LogicStart IDE Pro</title>
-
-<!-- CodeMirror CSS -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/theme/dracula.min.css">
-
+<title>LogicStart IDE Profissional</title>
 <style>
-    body {
-        margin: 0;
-        font-family: 'Arial', sans-serif;
-        background-color: #1e1e2f;
-        color: #fff;
-        display: flex;
-        flex-direction: column;
-        height: 100vh;
-    }
-    header {
-        background-color: #0d0d1a;
-        padding: 10px 15px;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-    }
-    header h1 {
-        margin: 0;
-        font-size: 1.2rem;
-        color: #4fc3f7;
-    }
-    #emailContainer {
-        display: flex;
-        gap: 5px;
-    }
-    #emailContainer input {
-        padding: 5px;
-        border-radius: 4px;
-        border: none;
-    }
-    #emailContainer button {
-        padding: 5px 10px;
-        background-color: #ffc107;
-        border: none;
-        border-radius: 4px;
-        cursor: pointer;
-        font-weight: bold;
-    }
-    #tabs {
-        display: flex;
-        background-color: #121227;
-    }
-    .tab {
-        padding: 8px 12px;
-        cursor: pointer;
-        border-bottom: 2px solid transparent;
-        color: #ccc;
-    }
-    .tab.active {
-        border-bottom: 2px solid #4fc3f7;
-        color: #fff;
-    }
-    #editorContainer {
-        flex: 1;
-        display: flex;
-        flex-direction: column;
-        position: relative;
-    }
-    #editor {
-        flex: 1;
-    }
-    #runBtn {
-        background-color: #4fc3f7;
-        border: none;
-        padding: 10px 15px;
-        font-size: 1rem;
-        cursor: pointer;
-        color: #000;
-        font-weight: bold;
-    }
-    #output {
-        height: 150px;
-        background-color: #11111f;
-        color: #fff;
-        padding: 10px;
-        overflow-y: auto;
-        font-family: monospace;
-    }
+body { font-family: 'Segoe UI', sans-serif; background: #181818; color: #e0e0e0; margin: 0; padding: 0; }
+header { padding: 10px 20px; background: #222; display: flex; justify-content: space-between; align-items: center; }
+header h1 { margin: 0; font-size: 1.4em; }
+.btn { background: #3a78d7; color: white; border: none; padding: 6px 12px; margin-left: 5px; cursor: pointer; border-radius: 3px; font-size: 0.9em; }
+.btn:hover { background: #2b5ea0; }
+#editor { width: 100%; height: 280px; background: #1e1e1e; color: #e0e0e0; font-family: monospace; font-size: 14px; padding: 10px; border: none; resize: none; outline: none; }
+#output { width: 100%; height: 130px; background: #1f1f1f; color: #a0ffa0; font-family: monospace; font-size: 14px; padding: 10px; overflow-y: auto; margin-top: 10px; border: 1px solid #333; }
+#actions { margin-top: 10px; }
+#autocomplete { position: absolute; background: #252525; color: #e0e0e0; border: 1px solid #3a78d7; display: none; max-height: 150px; overflow-y: auto; font-family: monospace; z-index: 1000; font-size: 14px; }
+.ac-item { padding: 2px 5px; cursor: pointer; }
+.ac-item:hover, .ac-selected { background: #3a78d7; }
+.keyword { color: #89ddff; }
 </style>
 </head>
 <body>
-
 <header>
-    <h1>🚀 LogicStart IDE Pro</h1>
-    <div id="emailContainer">
-        <input type="email" id="userEmail" placeholder="Seu email para salvar">
-        <button id="saveCodeBtn">💾 Salvar Código</button>
-    </div>
+<h1>LogicStart IDE Profissional</h1>
+<div id="user-actions">
+<button class="btn" onclick="login('google')">Login Google</button>
+<button class="btn" onclick="login('discord')">Login Discord</button>
+</div>
 </header>
 
-<div id="tabs">
-    <div class="tab active" data-file="main.ls">main.ls</div>
+<main style="padding: 20px; position: relative;">
+<textarea id="editor" placeholder="Escreva seu código aqui..." spellcheck="false"></textarea>
+<div id="autocomplete"></div>
+<div id="actions">
+<button class="btn" onclick="executarCodigo()">Executar</button>
+<button class="btn" onclick="salvarCodigo()" id="save-btn" style="display:none;">Salvar</button>
 </div>
-
-<div id="editorContainer">
-    <textarea id="editor"></textarea>
-    <button id="runBtn">▶ Executar</button>
-</div>
-
-<div id="output">Console de saída</div>
-
-<!-- CodeMirror JS -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.13/mode/javascript/javascript.min.js"></script>
+<div id="output"></div>
+</main>
 
 <script>
-    // Inicializa o editor
-    const editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-        mode: "javascript",
-        theme: "dracula",
-        lineNumbers: true,
-        autoCloseBrackets: true,
-        matchBrackets: true,
-        tabSize: 2
+// ================================
+// Autocomplete avançado
+// ================================
+const keywords = ["variavel","imprimir","se","senao","enquanto","para","funcao","retorna","classe","importa","tente","exceto"];
+const editor = document.getElementById("editor");
+const acBox = document.getElementById("autocomplete");
+let selectedIndex = -1;
+
+editor.addEventListener("input", updateAutocomplete);
+editor.addEventListener("keydown", navigateAutocomplete);
+
+function updateAutocomplete(){
+    const cursorPos = editor.selectionStart;
+    const text = editor.value.slice(0,cursorPos);
+    const match = text.match(/(\w+)$/);
+    if(!match){ acBox.style.display="none"; return; }
+    const prefix = match[1];
+    const suggestions = keywords.filter(k=>k.startsWith(prefix));
+    if(suggestions.length===0){ acBox.style.display="none"; return; }
+
+    acBox.innerHTML = suggestions.map((s,i)=>`<div class="ac-item" data-index="${i}">${s}</div>`).join("");
+    acBox.style.display="block";
+    acBox.style.left = editor.offsetLeft + "px";
+    acBox.style.top = (editor.offsetTop + editor.offsetHeight) + "px";
+    selectedIndex=-1;
+
+    document.querySelectorAll(".ac-item").forEach(item=>{
+        item.addEventListener("mousedown",(ev)=>{ ev.preventDefault(); insertAutocomplete(item.textContent); });
     });
+}
 
-    const output = document.getElementById("output");
-    const runBtn = document.getElementById("runBtn");
-    const saveBtn = document.getElementById("saveCodeBtn");
+function navigateAutocomplete(e){
+    const items=document.querySelectorAll(".ac-item");
+    if(acBox.style.display==="none"||items.length===0) return;
 
-    // Executar código
-    runBtn.addEventListener("click", async () => {
-        const code = editor.getValue();
-        output.textContent = "Executando...";
-        try {
-            const res = await fetch("/run", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({code})
-            });
-            const data = await res.json();
-            if(data.success) {
-                output.textContent = data.result + "\n\nTempo: " + data.time + "s";
-            } else {
-                output.textContent = "Erro: " + data.error;
-            }
-        } catch(e) {
-            output.textContent = "Erro ao executar: " + e.message;
-        }
+    if(e.key==="ArrowDown"){ e.preventDefault(); selectedIndex=(selectedIndex+1)%items.length; highlightItem(items); }
+    else if(e.key==="ArrowUp"){ e.preventDefault(); selectedIndex=(selectedIndex-1+items.length)%items.length; highlightItem(items); }
+    else if(e.key==="Enter"){ if(selectedIndex>=0){ e.preventDefault(); insertAutocomplete(items[selectedIndex].textContent); } }
+    else if(e.key==="Escape"){ acBox.style.display="none"; }
+}
+
+function highlightItem(items){ items.forEach((i,idx)=>i.style.background=idx===selectedIndex?"#3a78d7":"#252525"); }
+function insertAutocomplete(word){
+    const cursorPos=editor.selectionStart;
+    const textBefore=editor.value.slice(0,cursorPos).replace(/\w+$/,"");
+    const textAfter=editor.value.slice(cursorPos);
+    editor.value=textBefore+word+textAfter;
+    editor.selectionStart=editor.selectionEnd=textBefore.length+word.length;
+    acBox.style.display="none";
+    editor.focus();
+}
+
+// ================================
+// Login & Logout
+// ================================
+let user=null;
+function login(provider){ window.location.href=`/login/${provider}`; }
+function logout(){ fetch("/logout").then(()=>window.location.reload()); }
+
+// ================================
+// Executar código
+// ================================
+function executarCodigo(){
+    const code=editor.value;
+    document.getElementById("output").textContent="Executando...";
+    fetch("/run",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code}) })
+    .then(res=>res.json()).then(data=>{
+        if(data.success){ document.getElementById("output").textContent=data.result + `\n[Tempo: ${data.time}s]`; }
+        else{ document.getElementById("output").textContent=`Erro: ${data.error}\n${data.debug||""}`; }
     });
+}
 
-    // Salvar código
-    saveBtn.addEventListener("click", async () => {
-        const email = document.getElementById("userEmail").value;
-        const code = editor.getValue();
-        if(!email) return alert("Informe um email!");
-
-        try {
-            const res = await fetch("/save", {
-                method: "POST",
-                headers: {"Content-Type": "application/json"},
-                body: JSON.stringify({email, code})
-            });
-            const data = await res.json();
-            if(data.success) alert("Código salvo com sucesso!");
-            else alert("Falha ao salvar: " + data.error);
-        } catch(e) {
-            alert("Erro ao salvar: " + e.message);
-        }
+// ================================
+// Salvar código (Histórico por e-mail)
+// ================================
+function salvarCodigo(){
+    const code=editor.value;
+    const email = prompt("Digite seu e-mail para salvar o código:");
+    if(!email) return alert("E-mail obrigatório!");
+    fetch("/save",{ method:"POST", headers:{"Content-Type":"application/json"}, body:JSON.stringify({code,email}) })
+    .then(res=>res.json()).then(data=>{
+        if(data.success) alert("Código salvo com sucesso!");
+        else alert(`Erro: ${data.error}`);
     });
+}
 
-    // Abas (futuro multi-arquivos)
-    const tabs = document.querySelectorAll(".tab");
-    tabs.forEach(tab => {
-        tab.addEventListener("click", () => {
-            tabs.forEach(t => t.classList.remove("active"));
-            tab.classList.add("active");
-            // Aqui você poderia carregar outro arquivo no editor
-        });
+// ================================
+// Inicialização
+// ================================
+window.onload=()=>{
+    fetch("/health").then(res=>res.json()).then(data=>{
+        if(window.user){ updateUI(); }
     });
+};
+
+function updateUI(){
+    if(user){
+        document.getElementById("save-btn").style.display="inline-block";
+        document.getElementById("user-actions").innerHTML=`
+            Logado como <strong>${user.name}</strong>
+            <button class="btn" onclick="logout()">Logout</button>
+        `;
+    }
+}
 </script>
-
 </body>
 </html>
