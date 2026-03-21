@@ -1,157 +1,28 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-br">
 <head>
-<meta charset="UTF-8">
-<title>LogicStart IDE </title>
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.css">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/theme/dracula.min.css">
-<style>
-  body { margin:0; font-family:'Roboto', sans-serif; background:#0A0F1C; color:#FFF; display:flex; flex-direction:column; min-height:100vh; overflow:hidden;}
-  header { background:#0D1B33; padding:12px 20px; display:flex; justify-content:space-between; align-items:center; box-shadow:0 4px 12px rgba(0,0,0,0.4);}
-  header h1 { font-size:1.5rem; margin:0; color:#1E90FF; }
-  .btn { padding:10px 18px; border:none; color:white; cursor:pointer; border-radius:10px; font-weight:bold; transition:0.3s; box-shadow:0 4px 8px rgba(0,0,0,0.3);}
-  #runBtn { background:#1E90FF; }
-  #runBtn:hover { background:#3399FF; transform:scale(1.05);}
-  #backBtn { background:#FF5555; display:none; }
-  #backBtn:hover { background:#FF7777; transform:scale(1.05);}
-  #main { flex:1; display:flex; flex-direction:column; padding:12px; gap:12px; position:relative;}
-  #editorCard, #outputCard { position:absolute; top:0; left:0; right:0; bottom:0; border-radius:12px; padding:12px; background:#1A2236; box-shadow:0 4px 12px rgba(0,0,0,0.3); transition: transform 0.5s ease, opacity 0.5s ease; }
-  #editorCard { z-index:2; }
-  #outputCard { transform: translateX(100%); opacity:0; z-index:1; overflow:auto; }
-  #editor { height:100%; }
-  #overlay { position:absolute; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.6); display:none; align-items:center; justify-content:center; z-index:5; flex-direction:column;}
-  #progress { width:300px; height:24px; background:#222; border-radius:12px; overflow:hidden; margin-bottom:12px;}
-  #bar { width:0; height:100%; background:#1E90FF; border-radius:12px; transition: width 0.3s ease;}
-  #outputContent { white-space:pre-wrap; font-family:monospace; min-height:200px; }
-  #history { background:#0D1B33; padding:12px; border-radius:10px; max-height:150px; overflow-y:auto; margin-top:12px; }
-  .success { color:#00FF88; }
-  .error { color:#FF5555; }
-  hr { border:none; border-top:1px solid #222; margin:8px 0; }
-</style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🚀 LogicStart IDE</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
 <body>
-
 <header>
-  <h1>🚀 LogicStart IDE</h1>
-  <div>
-    <button id="backBtn" class="btn">⬅ Voltar</button>
-    <button id="runBtn" class="btn">▶ Executar</button>
-  </div>
+    <h1>🚀 LogicStart IDE</h1>
 </header>
 
-<div id="main">
-  <!-- Editor -->
-  <div id="editorCard">
-    <div id="editor"></div>
-  </div>
+<main>
+    <div id="editor-container" class="fade-in">
+        <textarea id="editor" placeholder="Digite seu código aqui..."></textarea>
+        <button id="run">▶ Executar</button>
+    </div>
 
-  <!-- Output -->
-  <div id="outputCard">
-    <div id="outputContent">Resultado aparecerá aqui...</div>
-    <div id="history"><strong>Histórico de Execuções:</strong></div>
-  </div>
-</div>
+    <div id="output-container" class="fade-out">
+        <pre id="output">Resultado aparecerá aqui...</pre>
+        <button id="back">🔙 Voltar</button>
+    </div>
+</main>
 
-<!-- Overlay de execução -->
-<div id="overlay">
-  <div id="progress">
-    <div id="bar"></div>
-  </div>
-  <span>Executando código...</span>
-</div>
-
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.9/mode/javascript/javascript.min.js"></script>
-<script>
-  const editor = CodeMirror(document.getElementById('editor'), {
-    mode: "javascript",
-    lineNumbers: true,
-    theme: "dracula",
-    value: "mostrar 'Olá LogicStart!';\ncriar objeto 'teste';",
-    lineWrapping: true,
-  });
-
-  const outputCard = document.getElementById('outputCard');
-  const editorCard = document.getElementById('editorCard');
-  const outputContent = document.getElementById('outputContent');
-  const historyDiv = document.getElementById('history');
-  const runBtn = document.getElementById('runBtn');
-  const backBtn = document.getElementById('backBtn');
-  const overlay = document.getElementById('overlay');
-  const bar = document.getElementById('bar');
-
-  function animarBotao(btn){
-    btn.style.transform = "scale(0.95)";
-    setTimeout(()=>{btn.style.transform = "scale(1)";},150);
-  }
-
-  function startProgress(){
-    overlay.style.display = "flex";
-    bar.style.width = "0%";
-    let pct = 0;
-    return new Promise(resolve=>{
-      const interval = setInterval(()=>{
-        pct += 10;
-        bar.style.width = pct+"%";
-        if(pct >= 100){ clearInterval(interval); resolve(); }
-      }, 50);
-    });
-  }
-
-  async function executarCodigo() {
-    animarBotao(runBtn);
-    const codigo = editor.getValue();
-    outputContent.textContent = "";
-    await startProgress();
-
-    try {
-      const res = await fetch('/run', {
-        method:'POST',
-        headers:{'Content-Type':'application/json'},
-        body: JSON.stringify({code: codigo})
-      });
-      const data = await res.json();
-
-      overlay.style.display = "none";
-
-      if(data.success){
-        outputContent.innerHTML = `<span class="success">${data.result}</span>`;
-        atualizarHistorico(codigo, data.result, "success");
-      } else {
-        outputContent.innerHTML = `<span class="error">${data.error}</span>`;
-        atualizarHistorico(codigo, data.error, "error");
-      }
-
-      // Transição para output
-      editorCard.style.transform = "translateX(-100%)";
-      editorCard.style.opacity = "0";
-      outputCard.style.transform = "translateX(0)";
-      outputCard.style.opacity = "1";
-      backBtn.style.display = "inline-block";
-
-    } catch(e){
-      overlay.style.display = "none";
-      outputContent.innerHTML = `<span class="error">Erro de conexão</span>`;
-    }
-  }
-
-  function atualizarHistorico(codigo, resultado, tipo){
-    const item = document.createElement('div');
-    item.innerHTML = `<strong>Código:</strong><br>${codigo.replace(/\n/g,'<br>')}<br><strong>Resultado:</strong> <span class="${tipo}">${resultado}</span><hr>`;
-    historyDiv.prepend(item);
-    if(historyDiv.childElementCount > 21) historyDiv.removeChild(historyDiv.lastChild);
-  }
-
-  runBtn.addEventListener('click', executarCodigo);
-
-  backBtn.addEventListener('click', ()=>{
-    editorCard.style.transform = "translateX(0)";
-    editorCard.style.opacity = "1";
-    outputCard.style.transform = "translateX(100%)";
-    outputCard.style.opacity = "0";
-    backBtn.style.display = "none";
-  });
-</script>
-
+<script src="{{ url_for('static', filename='js/main.js') }}"></script>
 </body>
 </html>
