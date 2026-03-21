@@ -1,29 +1,28 @@
 # engine.py
-from security import Security, MAX_LOOP, validar_nome
+from security import Security, MAX_LOOP
 from errors import LogicStartErro
 import re
 
 class LogicStart:
     """
-    Interpretador LogicStart (português estilo JavaScript/Steam)
+    Interpretador LogicStart Profissional (Português estilo JavaScript)
     """
 
-    def __init__(self, codigo: str):
+    def __init__(self, codigo):
         self.codigo = codigo
-        self.variaveis = {}   # Variáveis globais
-        self.funcoes = {}     # Funções definidas
+        self.variaveis = {}
+        self.funcoes = {}
         self.security = Security()
 
-        # Validação de segurança
+        # Verifica segurança
         if not self.security.verificar(codigo):
             raise LogicStartErro("Código bloqueado por segurança")
 
     def executar(self):
-        """Executa o código principal"""
         self._executar_bloco(self.codigo.splitlines(), self.variaveis)
 
     # =========================
-    # EXECUÇÃO DE BLOCO
+    # EXECUTA BLOCO
     # =========================
     def _executar_bloco(self, linhas, escopo):
         i = 0
@@ -33,19 +32,15 @@ class LogicStart:
                 i += 1
                 continue
 
-            # =========================
-            # VARIÁVEIS
-            # =========================
+            # Variável
             match_var = re.match(r"variavel\s+(\w+)\s*=\s*(.+)", linha)
             if match_var:
                 nome, valor = match_var.groups()
-                escopo[nome] = self._avaliar_expressao(valor, escopo)
+                escopo[nome] = self._avaliar(valor, escopo)
                 i += 1
                 continue
 
-            # =========================
-            # FUNÇÕES
-            # =========================
+            # Função
             match_func = re.match(r"funcao\s+(\w+)\((.*)\):", linha)
             if match_func:
                 nome, args = match_func.groups()
@@ -54,45 +49,34 @@ class LogicStart:
                 i += len(bloco) + 2
                 continue
 
-            # =========================
-            # CHAMADA DE FUNÇÃO
-            # =========================
+            # Chamada de função
             match_call = re.match(r"(\w+)\((.*)\)", linha)
             if match_call and match_call.group(1) in self.funcoes:
-                nome, args_str = match_call.groups()
-                self._chamar_funcao(nome, args_str, escopo)
+                self._chamar_funcao(match_call.group(1), match_call.group(2), escopo)
                 i += 1
                 continue
 
-            # =========================
-            # MOSTRAR
-            # =========================
+            # Mostrar
             match_mostrar = re.match(r"mostrar\s+(.+)", linha)
             if match_mostrar:
-                valor = self._avaliar_expressao(match_mostrar.group(1), escopo)
-                print(valor)
+                print(self._avaliar(match_mostrar.group(1), escopo))
                 i += 1
                 continue
 
-            # =========================
-            # CONDICIONAL SE / SENAO
-            # =========================
+            # Condicional
             if linha.startswith("se "):
                 cond = re.match(r"se\s+(.+):", linha).group(1)
-                if self._avaliar_expressao(cond, escopo):
+                if self._avaliar(cond, escopo):
                     i += 1
-                    continue
                 else:
                     i = self._pular_bloco(linhas, i)
-                    continue
+                continue
 
             if linha.startswith("senao:"):
                 i += 1
                 continue
 
-            # =========================
-            # LOOP REPETIR
-            # =========================
+            # Loop repetir
             match_repetir = re.match(r"repetir\s+(\d+)\s+vezes:", linha)
             if match_repetir:
                 vezes = int(match_repetir.group(1))
@@ -102,15 +86,13 @@ class LogicStart:
                 i += len(bloco) + 2
                 continue
 
-            # =========================
-            # LOOP ENQUANTO
-            # =========================
+            # Loop enquanto
             match_enquanto = re.match(r"enquanto\s+(.+):", linha)
             if match_enquanto:
                 cond = match_enquanto.group(1)
                 bloco = self._capturar_bloco(linhas, i)
                 loop_count = 0
-                while self._avaliar_expressao(cond, escopo):
+                while self._avaliar(cond, escopo):
                     if loop_count > MAX_LOOP:
                         raise LogicStartErro("Loop infinito detectado")
                     self._executar_bloco(bloco, dict(escopo))
@@ -118,9 +100,7 @@ class LogicStart:
                 i += len(bloco) + 2
                 continue
 
-            # =========================
-            # FIM
-            # =========================
+            # Fim de bloco
             if linha == "fim":
                 i += 1
                 continue
@@ -128,31 +108,20 @@ class LogicStart:
             raise LogicStartErro(f"Comando desconhecido: {linha}")
 
     # =========================
-    # AVALIAR EXPRESSÃO
+    # AVALIA EXPRESSÃO
     # =========================
-    def _avaliar_expressao(self, expr, escopo):
-        """
-        Avalia expressões aritméticas, strings, booleanos e variáveis.
-        """
-        # Substitui variáveis pelo valor real
+    def _avaliar(self, expr, escopo):
         for nome, valor in escopo.items():
-            if isinstance(valor, str):
-                valor_str = f'"{valor}"'
-            else:
-                valor_str = str(valor)
+            valor_str = f'"{valor}"' if isinstance(valor, str) else str(valor)
             expr = re.sub(rf"\b{nome}\b", valor_str, expr)
-
-        # Substitui booleanos português
         expr = expr.replace("verdadeiro", "True").replace("falso", "False")
-
-        # Avaliação segura
         try:
             return eval(expr, {"__builtins__": {}})
         except Exception:
             return expr.strip('"').strip("'")
 
     # =========================
-    # CAPTURAR BLOCO
+    # CAPTURA BLOCO
     # =========================
     def _capturar_bloco(self, linhas, start):
         bloco = []
@@ -163,7 +132,7 @@ class LogicStart:
         return bloco
 
     # =========================
-    # PULAR BLOCO
+    # PULA BLOCO
     # =========================
     def _pular_bloco(self, linhas, start):
         i = start + 1
@@ -172,10 +141,10 @@ class LogicStart:
         return i + 1
 
     # =========================
-    # CHAMAR FUNÇÃO
+    # CHAMA FUNÇÃO
     # =========================
     def _chamar_funcao(self, nome, args_str, escopo):
-        arg_values = [self._avaliar_expressao(a.strip(), escopo) for a in args_str.split(",") if a.strip()]
+        arg_values = [self._avaliar(a.strip(), escopo) for a in args_str.split(",") if a.strip()]
         arg_names, bloco = self.funcoes[nome]
         if len(arg_names) != len(arg_values):
             raise LogicStartErro(f"Função '{nome}' recebeu número incorreto de argumentos")
