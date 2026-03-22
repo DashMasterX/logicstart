@@ -1,112 +1,42 @@
 # gui/screens.py
+from flask import Blueprint, render_template, request, redirect, url_for, flash
+from executor_nodes import ExecutorNodes
+from parser import Parser
+from errors import LogicStartErro
 
-from kivymd.uix.screen import MDScreen
-from kivymd.uix.boxlayout import MDBoxLayout
-from kivymd.uix.card import MDCard
-from kivymd.uix.button import MDRaisedButton, MDIconButton
-from kivymd.uix.label import MDLabel
-from kivymd.uix.textfield import MDTextField
-from kivy.animation import Animation
-from kivy.clock import Clock
-from kivy.core.clipboard import Clipboard
-from kivy.uix.screenmanager import SlideTransition
+# Blueprint para separar rotas da IDE
+ide_bp = Blueprint("ide", __name__, template_folder="templates")
 
-class EditorScreen(MDScreen):
-    def __init__(self, app, **kwargs):
-        super().__init__(**kwargs)
-        self.app = app
+# Tela do editor
+@ide_bp.route("/", methods=["GET", "POST"])
+def editor():
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+        if not codigo:
+            flash("⚠️ Nenhum código inserido", "error")
+            return redirect(url_for("ide.editor"))
 
-        layout = MDBoxLayout(orientation="vertical", padding=12, spacing=12)
+        try:
+            # Parse do código para nodes
+            parser = Parser(codigo)
+            nodes = parser.parse()
 
-        # Título
-        titulo = MDLabel(text="🚀 LogicStart IDE", halign="center", font_style="H4")
+            # Executa os nodes
+            executor = ExecutorNodes(nodes)
+            resultado = executor.executar()
 
-        # Editor de código
-        self.input = MDTextField(
-            hint_text="Digite seu código em Português...",
-            multiline=True,
-            size_hint_y=0.8,
-            font_size=16
-        )
-        editor_card = MDCard(
-            orientation="vertical",
-            padding=12,
-            radius=[20],
-            elevation=10
-        )
-        editor_card.add_widget(self.input)
+            return render_template("resultado.html", resultado=resultado, codigo=codigo)
 
-        # Botões
-        botoes = MDBoxLayout(size_hint_y=None, height=60, spacing=10)
-        self.btn_run = MDRaisedButton(text="▶ Executar", on_press=self.run_code)
-        self.btn_clear = MDRaisedButton(text="🧹 Limpar", on_press=lambda x: self.input.text.clear())
-        self.btn_copy = MDIconButton(icon="content-copy", on_press=self.copy_output)
-        for b in [self.btn_run, self.btn_clear, self.btn_copy]:
-            botoes.add_widget(b)
+        except LogicStartErro as e:
+            return render_template("resultado.html", resultado=f"❌ Erro: {e}", codigo=codigo)
+        except Exception as e:
+            return render_template("resultado.html", resultado=f"❌ Erro inesperado: {e}", codigo=codigo)
 
-        layout.add_widget(titulo)
-        layout.add_widget(editor_card)
-        layout.add_widget(botoes)
-        self.add_widget(layout)
+    # GET: apenas renderiza o editor vazio
+    return render_template("editor.html", codigo="")
 
-    def run_code(self, instance):
-        # Animação do botão
-        Animation(opacity=0.5, duration=0.1).start(self.btn_run)
-        Animation(opacity=1, duration=0.1).start(self.btn_run)
-
-        code = self.input.text.strip()
-        if not code:
-            self.app.result_screen.show_output("⚠️ Nenhum código inserido")
-            self.app.sm.current = "resultado"
-        else:
-            self.app.sm.transition = SlideTransition(direction="left")
-            self.app.sm.current = "resultado"
-            Clock.schedule_once(lambda dt: self.app.execute_code(code), 0.2)
-
-    def copy_output(self, instance):
-        Clipboard.copy(self.app.result_screen.output.text)
-
-
-class ResultScreen(MDScreen):
-    def __init__(self, app, **kwargs):
-        super().__init__(**kwargs)
-        self.app = app
-
-        layout = MDBoxLayout(orientation="vertical", padding=12, spacing=12)
-
-        # Título
-        titulo = MDLabel(text="💻 Resultado", halign="center", font_style="H5")
-
-        # Output
-        self.output = MDTextField(
-            hint_text="Resultado...",
-            multiline=True,
-            readonly=True,
-            font_size=16
-        )
-        output_card = MDCard(
-            orientation="vertical",
-            padding=12,
-            radius=[20],
-            elevation=10
-        )
-        output_card.add_widget(self.output)
-
-        # Botão voltar
-        btn_back = MDRaisedButton(
-            text="⬅ Voltar",
-            pos_hint={"center_x": 0.5},
-            on_press=self.back
-        )
-
-        layout.add_widget(titulo)
-        layout.add_widget(output_card)
-        layout.add_widget(btn_back)
-        self.add_widget(layout)
-
-    def show_output(self, texto):
-        self.output.text = texto
-
-    def back(self, instance):
-        self.app.sm.transition = SlideTransition(direction="right")
-        self.app.sm.current = "editor"
+# Tela de resultado (pode ser incluída no mesmo template)
+@ide_bp.route("/resultado")
+def resultado():
+    # Apenas exemplo; real usa POST
+    return render_template("resultado.html", resultado="Aqui aparecerá o resultado", codigo="")
