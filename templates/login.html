@@ -3,178 +3,168 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Empire</title>
+<title>LogicStart Elite Imperium - Login</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
 
 <style>
-* { box-sizing: border-box; }
+:root {
+    --primary: #3a78d7;
+    --secondary: #ff5555;
+    --bg-gradient: linear-gradient(135deg, #0c0c0c, #1f1f1f);
+    --input-bg: #121212;
+    --input-border: #444;
+    --text-color: #e0e0e0;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
 
 body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: radial-gradient(circle at top, #1a1a1a, #0d0d0d);
-    color: #e0e0e0;
+    height: 100vh;
     display: flex;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    background: var(--bg-gradient);
+    color: var(--text-color);
 }
 
-/* CONTAINER */
-.login-box {
-    background: rgba(25,25,25,0.95);
-    backdrop-filter: blur(10px);
-    padding: 45px;
-    border-radius: 18px;
+.login-container {
+    background: #202020;
+    padding: 50px 40px;
+    border-radius: 20px;
     width: 360px;
     text-align: center;
     box-shadow: 0 15px 40px rgba(0,0,0,0.7);
-    animation: fade 0.5s ease;
+    animation: fadeIn 0.8s ease;
 }
 
-@keyframes fade {
-    from {opacity:0; transform:translateY(15px);}
-    to {opacity:1; transform:translateY(0);}
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(20px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 
-/* TITLES */
 h1 {
-    margin: 0;
-    font-size: 26px;
     font-weight: 600;
+    margin-bottom: 10px;
+    font-size: 28px;
 }
 
 .subtitle {
-    font-size: 14px;
     color: #aaa;
-    margin-bottom: 25px;
+    font-size: 14px;
+    margin-bottom: 30px;
 }
 
-/* INPUT */
-.input {
+.input-field {
     width: 100%;
-    padding: 13px;
+    padding: 14px;
     margin: 10px 0;
     border-radius: 10px;
-    border: 1px solid #333;
-    background: #121212;
-    color: #fff;
-    font-size: 15px;
-    transition: 0.2s;
+    border: 1px solid var(--input-border);
+    background: var(--input-bg);
+    color: var(--text-color);
+    font-size: 16px;
+    transition: all 0.2s;
 }
 
-.input:focus {
+.input-field:focus {
     outline: none;
-    border-color: #3a78d7;
-    box-shadow: 0 0 8px rgba(58,120,215,0.4);
+    border-color: var(--primary);
+    box-shadow: 0 0 5px var(--primary);
 }
 
-/* BUTTONS */
 .btn {
     width: 100%;
-    padding: 13px;
-    border: none;
+    padding: 14px;
     border-radius: 10px;
-    cursor: pointer;
-    font-size: 15px;
     margin-top: 12px;
-    transition: 0.2s;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    border: none;
+    transition: all 0.3s;
 }
 
-.btn-main {
-    background: linear-gradient(135deg, #3a78d7, #2b5ea0);
+.btn-primary {
+    background: var(--primary);
     color: white;
 }
+.btn-primary:hover { background: #2b5ea0; transform: translateY(-2px); }
 
-.btn-main:hover {
-    transform: scale(1.02);
-}
-
-/* GOOGLE */
 .btn-google {
     background: white;
     color: black;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
     font-weight: 500;
 }
+.btn-google:hover { background: #ddd; transform: translateY(-2px); }
 
-.btn-google:hover {
-    background: #ddd;
-}
-
-/* GUEST */
 .btn-guest {
     background: transparent;
-    border: 1px solid #333;
+    color: #aaa;
+    border: 1px solid #444;
+}
+.btn-guest:hover { background: #2a2a2a; transform: translateY(-2px); }
+
+.loader {
+    display: none;
+    margin-top: 15px;
+    font-size: 14px;
     color: #aaa;
 }
 
-.btn-guest:hover {
-    background: #1f1f1f;
-}
-
-/* STATUS */
-.status {
+.error {
     margin-top: 12px;
+    color: var(--secondary);
     font-size: 13px;
-    min-height: 18px;
+    font-weight: 500;
 }
 
-.error { color: #ff5555; }
-.success { color: #55ff88; }
-
-/* LOADING DOTS */
-.loading::after {
-    content: "...";
-    animation: dots 1s infinite;
-}
-
-@keyframes dots {
-    0% {content:".";}
-    33% {content:"..";}
-    66% {content:"...";}
+.icon-google {
+    width: 20px;
+    height: 20px;
 }
 </style>
 </head>
-
 <body>
 
-<div class="login-box">
-    <h1>LogicStart Empire</h1>
-    <div class="subtitle">Ambiente profissional de desenvolvimento</div>
+<div class="login-container">
+    <h1>LogicStart Elite</h1>
+    <div class="subtitle">Bem-vindo ao Imperium IDE</div>
 
-    <input class="input" type="email" id="email" placeholder="Email">
-    <input class="input" type="password" id="senha" placeholder="Senha">
+    <input type="email" id="email" placeholder="Email" class="input-field">
+    <input type="password" id="senha" placeholder="Senha" class="input-field">
 
-    <button class="btn btn-main" onclick="loginEmail()">Entrar</button>
+    <button class="btn btn-primary" onclick="loginEmail()">Entrar</button>
 
     <button class="btn btn-google" onclick="loginGoogle()">
+        <img class="icon-google" src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
         Entrar com Google
     </button>
 
-    <button class="btn btn-guest" onclick="guest()">
-        Entrar sem login
-    </button>
+    <button class="btn btn-guest" onclick="entrarSemLogin()">Entrar como Convidado</button>
 
-    <div class="status" id="status"></div>
+    <div class="loader" id="loader">Carregando...</div>
+    <div class="error" id="error"></div>
 </div>
 
 <script>
-const statusEl = document.getElementById("status");
+function setLoading(state) {
+    document.getElementById("loader").style.display = state ? "block" : "none";
+}
 
-function setStatus(msg, type="") {
-    statusEl.className = "status " + type;
-    statusEl.textContent = msg;
+function setError(msg) {
+    document.getElementById("error").textContent = msg || "";
 }
 
 function loginEmail() {
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
+    if(!email || !senha) { setError("Preencha todos os campos."); return; }
 
-    if(!email || !senha) {
-        setStatus("Preencha todos os campos", "error");
-        return;
-    }
-
-    setStatus("Conectando", "loading");
+    setError(""); setLoading(true);
 
     fetch("/login/email", {
         method: "POST",
@@ -183,24 +173,21 @@ function loginEmail() {
     })
     .then(res => res.json())
     .then(data => {
-        if(data.success){
-            setStatus("Login realizado", "success");
-            setTimeout(() => window.location.href="/ide", 800);
-        } else {
-            setStatus(data.error || "Erro no login", "error");
-        }
+        setLoading(false);
+        if(data.success) window.location.href = "/ide";
+        else setError(data.error || "Erro ao logar");
     })
-    .catch(() => {
-        setStatus("Erro de conexão", "error");
-    });
+    .catch(() => { setLoading(false); setError("Erro ao conectar com o servidor"); });
 }
 
 function loginGoogle() {
     window.location.href = "/login/google";
 }
 
-function guest() {
-    window.location.href = "/ide";
+function entrarSemLogin() {
+    fetch("/guest")
+    .then(() => window.location.href = "/ide")
+    .catch(() => setError("Erro ao entrar como convidado"));
 }
 </script>
 
