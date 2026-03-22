@@ -25,6 +25,7 @@ header {
     background: #2b2b2b;
     padding: 10px;
     display: flex;
+    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
 }
@@ -35,15 +36,21 @@ header h1 {
     color: #569CD6;
 }
 
+.menu {
+    display: flex;
+    flex-wrap: wrap;
+}
+
 .menu button {
     background: #3a3a3a;
     border: none;
     color: #d4d4d4;
-    padding: 6px 12px;
-    margin-left: 5px;
+    padding: 6px 10px;
+    margin: 3px;
     border-radius: 4px;
     cursor: pointer;
     transition: 0.2s;
+    font-size: 13px;
 }
 
 .menu button:hover {
@@ -54,6 +61,7 @@ header h1 {
     display: flex;
     flex: 1;
     overflow: hidden;
+    flex-direction: row;
 }
 
 #editor {
@@ -102,6 +110,25 @@ header h1 {
     white-space: pre-wrap;
     overflow-y: auto;
 }
+
+/* Responsividade celular */
+@media(max-width: 768px){
+    .container {
+        flex-direction: column;
+    }
+    #editor {
+        flex: none;
+        height: 50vh;
+    }
+    .sidebar {
+        flex: none;
+        height: 50vh;
+    }
+    .menu button {
+        font-size: 12px;
+        padding: 5px 8px;
+    }
+}
 </style>
 </head>
 <body>
@@ -141,18 +168,15 @@ function novo() {
 }
 
 function abrir() {
-    alert("Função Abrir: você pode implementar upload de arquivos .py aqui.");
+    alert("Função Abrir: implemente upload de arquivos .py aqui.");
 }
 
 function salvar() {
     const codigo = editor.getValue();
-    const email = prompt("Digite seu e-mail para salvar:");
-    if(!email) return;
-
     fetch("/save", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({code: codigo, email})
+        body: JSON.stringify({code: codigo})
     }).then(res=>res.json())
     .then(data=>{
         alert(data.success ? "Código salvo!" : data.error);
