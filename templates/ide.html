@@ -3,14 +3,14 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite</title>
+<title>LogicStart Elite Pro Max</title>
 
 <!-- CodeMirror CSS -->
 <link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css" rel="stylesheet">
 
-<!-- Estilo principal -->
 <style>
+/* ===== Body e cores ===== */
 body {
     margin: 0;
     font-family: 'Consolas', monospace;
@@ -21,26 +21,28 @@ body {
     min-height: 100vh;
 }
 
-/* Header */
+/* ===== Header ===== */
 header {
     background: #1f1f38;
     padding: 12px 20px;
-    font-size: 1.4em;
     display: flex;
     justify-content: space-between;
     align-items: center;
     border-bottom: 2px solid #6272a4;
+    box-shadow: 0 2px 6px rgba(0,0,0,0.5);
 }
-
-/* Botões do header */
+header div:first-child {
+    font-size: 1.5em;
+    font-weight: bold;
+}
 header button {
     position: relative;
     overflow: hidden;
     background: linear-gradient(90deg, #6272a4, #50fa7b);
     border: none;
     color: white;
-    padding: 10px 22px;
-    margin-left: 12px;
+    padding: 10px 24px;
+    margin-left: 16px;
     cursor: pointer;
     border-radius: 50px;
     font-weight: bold;
@@ -67,14 +69,14 @@ header button:active::after {
     opacity: 0;
 }
 
-/* Layout principal */
+/* ===== Layout principal ===== */
 .main-container {
     flex: 1;
     display: flex;
     overflow: hidden;
 }
 
-/* Painel lateral de arquivos */
+/* ===== Painel lateral de arquivos ===== */
 #file-panel {
     width: 220px;
     background: #191932;
@@ -84,7 +86,9 @@ header button:active::after {
 }
 #file-panel h3 {
     margin: 12px;
-    font-size: 1em;
+    font-size: 1.1em;
+    font-weight: bold;
+    color: #8be9fd;
 }
 .file-list {
     flex: 1;
@@ -99,11 +103,13 @@ header button:active::after {
     cursor: pointer;
     transition: 0.2s;
 }
-.file-list div:hover {
-    background: #444475;
+.file-list div.active, .file-list div:hover {
+    background: #50fa7b;
+    color: #000;
+    font-weight: bold;
 }
 
-/* Editor com abas */
+/* ===== Editor com abas ===== */
 #editor-area {
     flex: 2;
     display: flex;
@@ -126,11 +132,8 @@ header button:active::after {
     font-weight: bold;
     border-radius: 8px 8px 0 0;
 }
-.tab-bar div:hover {
-    background: #6272a4;
-}
 
-/* Editor CodeMirror */
+/* ===== Editor CodeMirror ===== */
 .CodeMirror {
     flex: 1;
     height: 100%;
@@ -139,7 +142,7 @@ header button:active::after {
     border: 2px solid #6272a4;
 }
 
-/* Terminal */
+/* ===== Terminal ===== */
 #terminal {
     flex: 1;
     background: #1a1a3b;
@@ -148,25 +151,26 @@ header button:active::after {
     font-family: monospace;
     font-size: 14px;
     border-top: 2px solid #6272a4;
+    border-radius: 0 0 10px 10px;
 }
 .terminal .info { color: #8be9fd; }
 .terminal .success { color: #50fa7b; }
 .terminal .error { color: #ff5555; }
 
-/* Botões flutuantes */
+/* ===== Botões flutuantes ===== */
 .float-buttons {
     position: fixed;
-    bottom: 20px;
-    right: 20px;
+    bottom: 30px;
+    right: 30px;
     display: flex;
     flex-direction: column;
-    gap: 16px;
+    gap: 18px;
 }
 .float-buttons button {
     background: linear-gradient(45deg,#6272a4,#50fa7b);
     border: none;
     color: #fff;
-    padding: 14px 24px;
+    padding: 14px 28px;
     border-radius: 50px;
     cursor: pointer;
     font-weight: bold;
@@ -195,7 +199,7 @@ header button:active::after {
     opacity: 0;
 }
 
-/* Responsivo */
+/* ===== Responsivo ===== */
 @media (max-width: 1024px) {
     .main-container { flex-direction: column; }
     #file-panel { width: 100%; height: 150px; flex-direction: row; overflow-x: auto; }
@@ -220,7 +224,7 @@ header button:active::after {
     <div id="file-panel">
         <h3>Arquivos</h3>
         <div class="file-list" id="file-list">
-            <div onclick="abrirArquivo('main')">main.ls</div>
+            <div onclick="abrirArquivo('main')" class="active">main.ls</div>
             <div onclick="abrirArquivo('teste')">teste.ls</div>
         </div>
     </div>
@@ -228,6 +232,7 @@ header button:active::after {
     <div id="editor-area">
         <div class="tab-bar" id="tab-bar">
             <div class="tab active" onclick="abrirAba('main')">main.ls</div>
+            <div class="tab" onclick="abrirAba('teste')">teste.ls</div>
         </div>
         <textarea id="editor"></textarea>
         <div id="terminal" class="terminal"></div>
@@ -235,9 +240,9 @@ header button:active::after {
 </div>
 
 <div class="float-buttons">
-    <button onclick="executarCodigo()">▶ Run</button>
-    <button onclick="salvarCodigo()">💾 Save</button>
-    <button onclick="limparTerminal()">🗑 Clear</button>
+    <button id="run-float">▶ Run</button>
+    <button id="save-float">💾 Save</button>
+    <button id="clear-float">🗑 Clear</button>
 </div>
 
 <!-- CodeMirror JS -->
