@@ -1,58 +1,88 @@
 # app.py - LogicStart Elite Web Top
-from flask import Flask, render_template, request, redirect, url_for, jsonify
+from flask import Flask, render_template, request, redirect, url_for, session, jsonify
 from executor_nodes import ExecutorNodes
 from nodes import Mostrar, Guardar
 
 app = Flask(__name__)
-SESSAO = {"logado": False}  # Sessão simples (apenas demo)
+app.secret_key = "logicstart-secret-key"  # necessário para session
 
 # -------------------------
-# Rotas principais
+# Sessão simples
+# -------------------------
+# session do Flask vai armazenar login
+# session["logado"] = True/False
+
+# -------------------------
+# Rotas
 # -------------------------
 @app.route("/")
 def index():
+    # Redireciona para login se não logado
+    if session.get("logado"):
+        return redirect(url_for("ide"))
     return redirect(url_for("login"))
 
-@app.route("/login", methods=["GET","POST"])
+@app.route("/login", methods=["GET", "POST"])
 def login():
     error = ""
     if request.method == "POST":
-        email = request.form.get("email","").strip()
-        senha = request.form.get("senha","").strip()
-        if (email=="admin" and senha=="1234") or (email=="" and senha==""):
-            SESSAO["logado"] = True
+        email = request.form.get("email", "").strip()
+        senha = request.form.get("senha", "").strip()
+        if (email == "admin" and senha == "1234") or (email == "" and senha == ""):
+            session["logado"] = True
             return redirect(url_for("ide"))
         else:
             error = "Usuário ou senha inválidos"
     return render_template("login.html", error=error)
 
-@app.route("/ide")
-def ide():
-    if not SESSAO.get("logado"):
-        return redirect(url_for("login"))
-    return render_template("ide.html")
-
 @app.route("/logout")
 def logout():
-    SESSAO["logado"] = False
+    session["logado"] = False
     return redirect(url_for("login"))
 
+@app.route("/ide", methods=["GET", "POST"])
+def ide():
+    if not session.get("logado"):
+        return redirect(url_for("login"))
+
+    resultado = ""
+    codigo = ""
+    error = ""
+
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+        if not codigo:
+            error = "⚠ Nenhum código inserido"
+        else:
+            try:
+                # Para demo: converte em nodes simples
+                nodes = [
+                    Guardar("x", "10"),
+                    Mostrar("Olá mundo"),
+                    Mostrar("x")
+                ]
+                executor = ExecutorNodes(nodes)
+                resultado = executor.executar()
+            except Exception as e:
+                resultado = f"Erro: {e}"
+
+    return render_template("ide.html", resultado=resultado, codigo=codigo, error=error)
+
 # -------------------------
-# API para execução de código
+# API para executar código via fetch no ide.html
 # -------------------------
 @app.route("/run", methods=["POST"])
-def run_code():
-    if not SESSAO.get("logado"):
-        return jsonify({"success": False, "error": "Não logado"})
+def run():
+    if not session.get("logado"):
+        return jsonify({"success": False, "error": "Não logado"}), 401
 
     data = request.get_json()
-    codigo = data.get("code","").strip()
+    codigo = data.get("code", "").strip()
     if not codigo:
-        return jsonify({"success": False, "error": "Nenhum código inserido"})
+        return jsonify({"success": False, "error": "Código vazio"})
 
     try:
-        # Para demo: transforma em nodes simples
-        # Aqui você pode integrar seu parser real
+        # Para demo: nodes simples
         nodes = [
             Guardar("x", "10"),
             Mostrar("Olá mundo"),
@@ -65,20 +95,21 @@ def run_code():
         return jsonify({"success": False, "error": str(e)})
 
 # -------------------------
-# API para salvar código
+# API para salvar código via fetch
 # -------------------------
 @app.route("/save", methods=["POST"])
-def save_code():
-    if not SESSAO.get("logado"):
-        return jsonify({"success": False, "error": "Não logado"})
+def save():
+    if not session.get("logado"):
+        return jsonify({"success": False, "error": "Não logado"}), 401
+
     data = request.get_json()
-    codigo = data.get("code","")
-    try:
-        with open("saved_code.txt","w", encoding="utf-8") as f:
-            f.write(codigo)
-        return jsonify({"success": True})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+    codigo = data.get("code", "").strip()
+    if not codigo:
+        return jsonify({"success": False, "error": "Código vazio"})
+
+    # Aqui você pode implementar salvar em arquivo ou DB
+    # Por enquanto só simula sucesso
+    return jsonify({"success": True})
 
 # -------------------------
 # Rodar app na Square Cloud porta 80
