@@ -1,3 +1,5 @@
+# gui/screens.py
+
 from kivymd.uix.screen import MDScreen
 from kivymd.uix.boxlayout import MDBoxLayout
 from kivymd.uix.card import MDCard
@@ -7,23 +9,40 @@ from kivymd.uix.textfield import MDTextField
 from kivy.animation import Animation
 from kivy.clock import Clock
 from kivy.core.clipboard import Clipboard
+from kivy.uix.screenmanager import SlideTransition
 
 class EditorScreen(MDScreen):
     def __init__(self, app, **kwargs):
         super().__init__(**kwargs)
         self.app = app
+
         layout = MDBoxLayout(orientation="vertical", padding=12, spacing=12)
 
+        # Título
         titulo = MDLabel(text="🚀 LogicStart IDE", halign="center", font_style="H4")
-        self.input = MDTextField(hint_text="Digite seu código...", multiline=True, size_hint_y=0.8)
-        editor_card = MDCard(orientation="vertical", padding=12, radius=[20], elevation=10)
+
+        # Editor de código
+        self.input = MDTextField(
+            hint_text="Digite seu código em Português...",
+            multiline=True,
+            size_hint_y=0.8,
+            font_size=16
+        )
+        editor_card = MDCard(
+            orientation="vertical",
+            padding=12,
+            radius=[20],
+            elevation=10
+        )
         editor_card.add_widget(self.input)
 
+        # Botões
         botoes = MDBoxLayout(size_hint_y=None, height=60, spacing=10)
         self.btn_run = MDRaisedButton(text="▶ Executar", on_press=self.run_code)
         self.btn_clear = MDRaisedButton(text="🧹 Limpar", on_press=lambda x: self.input.text.clear())
         self.btn_copy = MDIconButton(icon="content-copy", on_press=self.copy_output)
-        for b in [self.btn_run, self.btn_clear, self.btn_copy]: botoes.add_widget(b)
+        for b in [self.btn_run, self.btn_clear, self.btn_copy]:
+            botoes.add_widget(b)
 
         layout.add_widget(titulo)
         layout.add_widget(editor_card)
@@ -31,11 +50,14 @@ class EditorScreen(MDScreen):
         self.add_widget(layout)
 
     def run_code(self, instance):
+        # Animação do botão
         Animation(opacity=0.5, duration=0.1).start(self.btn_run)
         Animation(opacity=1, duration=0.1).start(self.btn_run)
+
         code = self.input.text.strip()
         if not code:
             self.app.result_screen.show_output("⚠️ Nenhum código inserido")
+            self.app.sm.current = "resultado"
         else:
             self.app.sm.transition = SlideTransition(direction="left")
             self.app.sm.current = "resultado"
@@ -49,14 +71,34 @@ class ResultScreen(MDScreen):
     def __init__(self, app, **kwargs):
         super().__init__(**kwargs)
         self.app = app
+
         layout = MDBoxLayout(orientation="vertical", padding=12, spacing=12)
+
+        # Título
         titulo = MDLabel(text="💻 Resultado", halign="center", font_style="H5")
 
-        self.output = MDTextField(hint_text="Resultado...", multiline=True, readonly=True)
-        output_card = MDCard(orientation="vertical", padding=12, radius=[20], elevation=10)
+        # Output
+        self.output = MDTextField(
+            hint_text="Resultado...",
+            multiline=True,
+            readonly=True,
+            font_size=16
+        )
+        output_card = MDCard(
+            orientation="vertical",
+            padding=12,
+            radius=[20],
+            elevation=10
+        )
         output_card.add_widget(self.output)
 
-        btn_back = MDRaisedButton(text="⬅ Voltar", pos_hint={"center_x":0.5}, on_press=self.back)
+        # Botão voltar
+        btn_back = MDRaisedButton(
+            text="⬅ Voltar",
+            pos_hint={"center_x": 0.5},
+            on_press=self.back
+        )
+
         layout.add_widget(titulo)
         layout.add_widget(output_card)
         layout.add_widget(btn_back)
