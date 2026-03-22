@@ -1,4 +1,5 @@
-# executor_nodes.py - Executor LogicStart Elite nível empresa
+# executor_nodes.py - Executor LogicStart Elite nível empresa com suporte a regex
+import re
 from nodes import (
     Mostrar, Guardar, Repetir, Enquanto, Condicao, SeSenao,
     Funcao, Retorna, ChamadaFuncao, BreakLoop, ContinueLoop,
@@ -13,6 +14,7 @@ class ExecutorNodes:
     - Variáveis, funções, loops, condicionais
     - Listas e dicionários
     - Expressões complexas
+    - Regex seguro via 're'
     """
     def __init__(self, nodes):
         self.nodes = nodes
@@ -32,7 +34,6 @@ class ExecutorNodes:
             # Guardar variável
             if isinstance(node, Guardar):
                 valor = self._avaliar(node.valor, contexto)
-                # Transformar Lista e Dicionario do parser em objetos Python reais
                 if isinstance(valor, Lista):
                     contexto[node.nome] = [self._avaliar(x, contexto) for x in valor.elementos]
                 elif isinstance(valor, Dicionario):
@@ -94,7 +95,6 @@ class ExecutorNodes:
                     novo_contexto[nome_param] = self._avaliar(valor_param, contexto)
                 try:
                     resultado = self._executar_bloco(func.bloco, novo_contexto)
-                    # Retorna valor se houver
                     if resultado is not None:
                         return resultado
                 except Retorna as r:
@@ -137,19 +137,20 @@ class ExecutorNodes:
             i += 1
 
     def _avaliar(self, expr, contexto):
-        # Retorna valores simples
+        """
+        Avalia expressões de forma segura.
+        Agora suporta regex via 're'.
+        """
         if isinstance(expr, (int,float,bool)):
             return expr
 
-        # Se for string, pode ser variável ou expressão
         if isinstance(expr, str):
             expr = expr.strip()
-            # Substitui variáveis conhecidas
             for var in contexto:
                 expr = re.sub(rf'\b{var}\b', str(contexto[var]), expr)
             try:
-                # Avaliação segura
-                return eval(expr, {"__builtins__": {}}, {})
+                # Avaliação segura, com re disponível
+                return eval(expr, {"__builtins__": {}, "re": re}, {})
             except:
                 return expr.strip('"').strip("'")
         return expr
