@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite Pro Max - Profissional</title>
+<title>LogicStart Elite</title>
 
 <!-- CodeMirror CSS -->
 <link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
@@ -11,21 +11,20 @@
 
 <!-- Estilo principal -->
 <style>
-/* ===== Body e cores ===== */
 body {
     margin: 0;
     font-family: 'Consolas', monospace;
-    background: #121212;
+    background: #0f0f1f;
     color: #f8f8f2;
     display: flex;
     flex-direction: column;
     min-height: 100vh;
 }
 
-/* ===== Header ===== */
+/* Header */
 header {
-    background: #282a36;
-    padding: 10px 20px;
+    background: #1f1f38;
+    padding: 12px 20px;
     font-size: 1.4em;
     display: flex;
     justify-content: space-between;
@@ -33,14 +32,15 @@ header {
     border-bottom: 2px solid #6272a4;
 }
 
+/* Botões do header */
 header button {
     position: relative;
     overflow: hidden;
     background: linear-gradient(90deg, #6272a4, #50fa7b);
     border: none;
     color: white;
-    padding: 8px 18px;
-    margin-left: 8px;
+    padding: 10px 22px;
+    margin-left: 12px;
     cursor: pointer;
     border-radius: 50px;
     font-weight: bold;
@@ -48,7 +48,7 @@ header button {
 }
 header button:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 18px rgba(80,250,123,0.5);
+    box-shadow: 0 6px 20px rgba(80,250,123,0.5);
 }
 header button::after {
     content: "";
@@ -67,7 +67,7 @@ header button:active::after {
     opacity: 0;
 }
 
-/* ===== Layout principal ===== */
+/* Layout principal */
 .main-container {
     flex: 1;
     display: flex;
@@ -76,14 +76,14 @@ header button:active::after {
 
 /* Painel lateral de arquivos */
 #file-panel {
-    width: 200px;
-    background: #1e1e2f;
+    width: 220px;
+    background: #191932;
     border-right: 2px solid #6272a4;
     display: flex;
     flex-direction: column;
 }
 #file-panel h3 {
-    margin: 10px;
+    margin: 12px;
     font-size: 1em;
 }
 .file-list {
@@ -92,15 +92,15 @@ header button:active::after {
     padding: 0 10px;
 }
 .file-list div {
-    padding: 8px;
-    margin-bottom: 4px;
-    background: #282a36;
-    border-radius: 8px;
+    padding: 10px;
+    margin-bottom: 6px;
+    background: #28284b;
+    border-radius: 10px;
     cursor: pointer;
     transition: 0.2s;
 }
 .file-list div:hover {
-    background: #44475a;
+    background: #444475;
 }
 
 /* Editor com abas */
@@ -111,11 +111,11 @@ header button:active::after {
 }
 .tab-bar {
     display: flex;
-    background: #282a36;
+    background: #28284b;
     border-bottom: 2px solid #6272a4;
 }
 .tab-bar div {
-    padding: 8px 14px;
+    padding: 10px 16px;
     cursor: pointer;
     color: #f8f8f2;
     transition: 0.2s;
@@ -123,6 +123,8 @@ header button:active::after {
 .tab-bar div.active {
     background: #50fa7b;
     color: #000;
+    font-weight: bold;
+    border-radius: 8px 8px 0 0;
 }
 .tab-bar div:hover {
     background: #6272a4;
@@ -137,11 +139,11 @@ header button:active::after {
     border: 2px solid #6272a4;
 }
 
-/* Terminal / saída */
+/* Terminal */
 #terminal {
     flex: 1;
-    background: #1e1e2f;
-    padding: 10px;
+    background: #1a1a3b;
+    padding: 12px;
     overflow-y: auto;
     font-family: monospace;
     font-size: 14px;
@@ -151,20 +153,20 @@ header button:active::after {
 .terminal .success { color: #50fa7b; }
 .terminal .error { color: #ff5555; }
 
-/* Botões flutuantes de ação rápida */
+/* Botões flutuantes */
 .float-buttons {
     position: fixed;
     bottom: 20px;
     right: 20px;
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 16px;
 }
 .float-buttons button {
     background: linear-gradient(45deg,#6272a4,#50fa7b);
     border: none;
     color: #fff;
-    padding: 12px 20px;
+    padding: 14px 24px;
     border-radius: 50px;
     cursor: pointer;
     font-weight: bold;
@@ -173,8 +175,8 @@ header button:active::after {
     transition: transform 0.2s ease, box-shadow 0.3s ease;
 }
 .float-buttons button:hover {
-    transform: scale(1.1);
-    box-shadow: 0 6px 18px rgba(80,250,123,0.5);
+    transform: scale(1.15);
+    box-shadow: 0 6px 22px rgba(80,250,123,0.5);
 }
 .float-buttons button::after {
     content: "";
@@ -206,7 +208,7 @@ header button:active::after {
 <body>
 
 <header>
-    <div>LogicStart Elite Pro Max - Profissional</div>
+    <div>LogicStart Elite Pro Max</div>
     <div>
         <button id="run-btn">▶ Executar</button>
         <button id="save-btn">💾 Salvar</button>
@@ -235,13 +237,14 @@ header button:active::after {
 <div class="float-buttons">
     <button onclick="executarCodigo()">▶ Run</button>
     <button onclick="salvarCodigo()">💾 Save</button>
+    <button onclick="limparTerminal()">🗑 Clear</button>
 </div>
 
 <!-- CodeMirror JS -->
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
 
-<!-- Editor JS profissional -->
+<!-- Editor JS -->
 <script src="{{ url_for('static', filename='js/editor.js') }}"></script>
 
 </body>
