@@ -2,7 +2,7 @@ from flask import Flask, render_template, request, redirect, url_for, jsonify
 from executor_nodes import ExecutorNodes
 from nodes import Mostrar, Guardar
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder="templates")  # Certifique-se que a pasta 'templates' existe
 
 # -------------------------
 # Sessão simples
@@ -10,12 +10,15 @@ app = Flask(__name__)
 SESSAO = {"logado": False}
 
 # -------------------------
-# Rotas principais
+# Rota inicial
 # -------------------------
 @app.route("/")
 def index():
     return redirect(url_for("login"))
 
+# -------------------------
+# Login
+# -------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
     error = ""
@@ -29,6 +32,9 @@ def login():
             error = "Usuário ou senha inválidos"
     return render_template("login.html", error=error)
 
+# -------------------------
+# IDE
+# -------------------------
 @app.route("/ide")
 def ide():
     if not SESSAO.get("logado"):
@@ -36,7 +42,7 @@ def ide():
     return render_template("ide.html", resultado="", codigo="", error="")
 
 # -------------------------
-# Nova rota para executar código
+# Rota para executar código
 # -------------------------
 @app.route("/run", methods=["POST"])
 def run_code():
@@ -50,7 +56,8 @@ def run_code():
         return jsonify({"success": False, "error": "Nenhum código fornecido"})
 
     try:
-        # Para demo, converte em nodes simples
+        # Aqui você pode colocar o seu parser real
+        # Por enquanto, exemplo de nodes simples:
         nodes = [
             Guardar("x", "10"),
             Mostrar("Olá mundo"),
@@ -71,7 +78,7 @@ def logout():
     return redirect(url_for("login"))
 
 # -------------------------
-# Rodar app na Square Cloud porta 80
+# Rodar app no Square Cloud porta 80
 # -------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
