@@ -1,129 +1,106 @@
+# engine.py
+
 import re
-import ast
+from contexto import Contexto
+from security import Security
 
-class EnginePythonPortugues:
+class LogicStartErro(Exception):
+    pass
+
+class Engine:
     """
-    Engine Python em português – completa, segura e multiplataforma.
+    Engine LogicStart Pro Max
+    Suporta Python em português com escopos, funções, variáveis e segurança.
     """
-
-    # Tradução do português -> Python
-    TRADUCOES = {
-        "variavel": "",       # variavel x = 10 -> x = 10
-        "imprimir": "print",
-        "se": "if",
-        "senao": "else",
-        "enquanto": "while",
-        "para": "for",
-        "funcao": "def",
-        "retorna": "return",
-        "entrada": "input"
-    }
-
-    # Comandos/recursos bloqueados por segurança
-    BLOQUEIOS = ["os.", "open(", "exec(", "__import__", "eval(", "compile("]
 
     def __init__(self, codigo: str):
         self.codigo = codigo
-        self.saida = []      # Captura de outputs
-        self.variaveis = {}  # Armazena variáveis globais
-        self.funcoes = {}    # Armazena funções definidas
-        self.historico = []  # Armazena histórico de código executado
-
-    def traduzir_linha(self, linha: str) -> str:
-        linha = linha.strip()
-        for pt, py in self.TRADUCOES.items():
-            if pt in linha:
-                if pt == "variavel":
-                    linha = linha.replace("variavel", "", 1).strip()
-                else:
-                    linha = linha.replace(pt, py)
-        return linha
-
-    def verificar_segurança(self, linha: str):
-        for bloqueio in self.BLOQUEIOS:
-            if bloqueio in linha:
-                raise Exception(f"Acesso bloqueado na linha: {linha}")
+        self.contexto = Contexto()
+        self.saida = []
+        self.security = Security()
 
     def executar(self):
-        linhas = self.codigo.splitlines()
-        codigo_traduzido = ""
-
-        for linha in linhas:
-            linha = linha.strip()
-            if not linha or linha.startswith("//"):  # Ignora comentários
-                continue
-
-            self.verificar_segurança(linha)
-            codigo_traduzido += self.traduzir_linha(linha) + "\n"
-
-        # Ambiente seguro para execução
-        exec_env = {}
+        # Verifica segurança antes
         try:
-            exec(
-                codigo_traduzido,
-                {"__builtins__": {
-                    "print": self._print,
-                    "input": input,
-                    "range": range,
-                    "len": len,
-                    "int": int,
-                    "float": float,
-                    "str": str,
-                    "list": list,
-                    "dict": dict,
-                    "sum": sum,
-                    "max": max,
-                    "min": min,
-                }},
-                exec_env
-            )
-            self.historico.append(self.codigo)
-        except Exception as e:
-            raise Exception(f"Erro na execução: {e}")
+            self.security.verificar(self.codigo)
+        except ValueError as e:
+            raise LogicStartErro(f"Erro de segurança: {e}")
 
-    def _print(self, *args, **kwargs):
-        texto = " ".join(str(a) for a in args)
-        self.saida.append(texto)
-        print(texto)
+        linhas = self.codigo.splitlines()
+        i = 0
+        while i < len(linhas):
+            linha = linhas[i].strip()
+            if not linha or linha.startswith("//"):
+                i += 1
+                continue
+            i += self.processar_linha(linha, i, linhas)
 
-# ------------------------------
-# EXEMPLO DE USO
-# ------------------------------
-codigo = """
-// Exemplo completo de Python em português
-variavel x = 10
-variavel y = 5
+    def processar_linha(self, linha, idx, linhas):
+        # Variável: variavel x = 10
+        var_match = re.match(r'^variavel\s+(\w+)\s*=\s*(.+)$', linha)
+        if var_match:
+            nome, valor = var_match.groups()
+            valor_eval = self.avaliar_expressao(valor)
+            self.contexto.definir_local(nome, valor_eval)
+            return 1
 
-se x > y:
-    imprimir("X é maior que Y")
-senao:
-    imprimir("X não é maior que Y")
+        # Imprimir: imprimir("Olá")
+        imprimir_match = re.match(r'^imprimir\((.+)\)$', linha)
+        if imprimir_match:
+            valor = self.avaliar_expressao(imprimir_match.group(1))
+            self.saida.append(str(valor))
+            print(valor)
+            return 1
 
-enquanto y < x:
-    imprimir(y)
-    y = y + 1
+        # Condicional simples: se x > 5
+        se_match = re.match(r'^se\s+(.+)$', linha)
+        if se_match:
+            condicao = se_match.group(1)
+            if not self.avaliar_condicao(condicao):
+                # Pula próxima linha
+                return 2
+            return 1
 
-para i em range(3):
-    imprimir(i)
+        # Retorna valor: retorna x
+        retorna_match = re.match(r'^retorna\s+(.+)$', linha)
+        if retorna_match:
+            valor = self.avaliar_expressao(retorna_match.group(1))
+            self.saida.append(str(valor))
+            print(valor)
+            return 1
 
-funcao soma(a, b):
-    imprimir(a + b)
-    
-soma(10, 20)
+        # Loop: repetir 5
+        loop_match = re.match(r'^repetir\s+(\d+)$', linha)
+        if loop_match:
+            vezes = int(loop_match.group(1))
+            # Executa próxima linha X vezes
+            proxima = linhas[idx + 1].strip() if idx + 1 < len(linhas) else ""
+            for _ in range(vezes):
+                self.processar_linha(proxima, idx + 1, linhas)
+            return 2
 
-variavel nome = entrada("Qual é o seu nome? ")
-imprimir("Olá", nome)
-"""
+        # Comando desconhecido
+        raise LogicStartErro(f"Comando desconhecido: {linha}")
 
-engine = EnginePythonPortugues(codigo)
-engine.executar()
+    def avaliar_expressao(self, expr):
+        # Substitui variáveis
+        tokens = re.findall(r'\b\w+\b', expr)
+        for t in tokens:
+            if self.contexto.existe(t):
+                expr = re.sub(r'\b' + t + r'\b', str(self.contexto.obter_local(t)), expr)
+        # Avalia expressões matemáticas
+        try:
+            return eval(expr, {}, {})
+        except:
+            return expr.strip('"').strip("'")
 
-# Saída capturada
-print("\n--- Saída Capturada ---")
-for linha in engine.saida:
-    print(linha)
-
-# Histórico
-print("\n--- Histórico ---")
-for item in engine.historico:
-    print(item)
+    def avaliar_condicao(self, cond):
+        # Substitui variáveis
+        tokens = re.findall(r'\b\w+\b', cond)
+        for t in tokens:
+            if self.contexto.existe(t):
+                cond = re.sub(r'\b' + t + r'\b', str(self.contexto.obter_local(t)), cond)
+        try:
+            return bool(eval(cond, {}, {}))
+        except:
+            return False
