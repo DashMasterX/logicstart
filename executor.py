@@ -1,123 +1,138 @@
-# executor_nodes.py
+# executor_nodes.py - Executor nível empresa/Apple Pro Max
 
-from nodes import Mostrar, Guardar, Repetir, Condicao, Funcao, Retorna, Enquanto, SeSenao
+from nodes import (
+    Mostrar, Guardar, Repetir, Enquanto, Condicao, SeSenao,
+    Funcao, Retorna, ChamadaFuncao, BreakLoop, ContinueLoop,
+    Lista, Dicionario, AtribuicaoLista, AtribuicaoDicionario,
+    Expressao
+)
 from errors import LogicStartErro
 
 class ExecutorNodes:
     def __init__(self, nodes):
         self.nodes = nodes
-        self.contexto_global = {}    # Variáveis globais
-        self.funcoes = {}            # Funções definidas
-        self.saida = []              # Armazena saída de 'mostrar'
+        self.contexto = {}      # Variáveis globais
+        self.funcoes = {}       # Funções definidas
+        self.saida = []         # Saída de 'Mostrar'
+        self._loop_break = False
+        self._loop_continue = False
 
-    # -----------------------------
-    # Executa todos os nodes
-    # -----------------------------
     def executar(self):
+        """Executa todos os nodes"""
         for node in self.nodes:
-            self.executar_node(node, self.contexto_global)
+            self.executar_node(node)
         return "\n".join(self.saida) or "✔ Executado com sucesso"
 
-    # -----------------------------
-    # Executa um único node
-    # -----------------------------
-    def executar_node(self, node, contexto):
+    def executar_node(self, node):
+        """Executa um único node de acordo com seu tipo"""
         if isinstance(node, Guardar):
-            valor = self.avaliar_expressao(node.valor, contexto)
-            contexto[node.nome] = valor
+            self.contexto[node.nome] = self.avaliar_expressao(node.valor)
 
         elif isinstance(node, Mostrar):
-            valor = self.avaliar_expressao(node.valor, contexto)
+            valor = self.avaliar_expressao(node.valor)
             self.saida.append(str(valor))
             print(valor)
 
         elif isinstance(node, Repetir):
-            vezes = self.avaliar_expressao(node.vezes, contexto)
-            for _ in range(int(vezes)):
+            for _ in range(node.vezes):
                 for n in node.bloco:
-                    self.executar_node(n, contexto.copy())
+                    self.executar_node(n)
+                    if self._loop_break:
+                        self._loop_break = False
+                        return
+                    if self._loop_continue:
+                        self._loop_continue = False
+                        break
 
         elif isinstance(node, Enquanto):
-            while self.avaliar_condicao(node.condicao, contexto):
+            while self.avaliar_condicao(node.condicao):
                 for n in node.bloco:
-                    self.executar_node(n, contexto.copy())
+                    self.executar_node(n)
+                    if self._loop_break:
+                        self._loop_break = False
+                        return
+                    if self._loop_continue:
+                        self._loop_continue = False
+                        break
 
         elif isinstance(node, Condicao):
-            if self.avaliar_condicao(node.condicao, contexto):
+            if self.avaliar_condicao(node.condicao):
                 for n in node.bloco:
-                    self.executar_node(n, contexto.copy())
+                    self.executar_node(n)
 
         elif isinstance(node, SeSenao):
-            if self.avaliar_condicao(node.condicao, contexto):
-                for n in node.bloco_true:
-                    self.executar_node(n, contexto.copy())
-            else:
-                for n in node.bloco_false:
-                    self.executar_node(n, contexto.copy())
+            bloco = node.bloco_true if self.avaliar_condicao(node.condicao) else node.bloco_false
+            for n in bloco:
+                self.executar_node(n)
 
         elif isinstance(node, Funcao):
             self.funcoes[node.nome] = node
 
-        elif isinstance(node, Retorna):
-            valor = self.avaliar_expressao(node.valor, contexto)
-            raise RetornoFuncao(valor)
-
         elif isinstance(node, ChamadaFuncao):
-            self.executar_funcao(node.nome, node.parametros, contexto)
+            if node.nome not in self.funcoes:
+                raise LogicStartErro(f"Função '{node.nome}' não definida")
+            func = self.funcoes[node.nome]
+            if len(func.parametros) != len(node.parametros):
+                raise LogicStartErro(f"Parâmetros incorretos para '{node.nome}'")
+            # Contexto temporário para função
+            old_contexto = self.contexto.copy()
+            for p, v in zip(func.parametros, node.parametros):
+                self.contexto[p] = self.avaliar_expressao(v)
+            for n in func.bloco:
+                self.executar_node(n)
+            self.contexto = old_contexto
+
+        elif isinstance(node, Retorna):
+            valor = self.avaliar_expressao(node.valor)
+            self.saida.append(str(valor))
+            print(valor)
+
+        elif isinstance(node, BreakLoop):
+            self._loop_break = True
+
+        elif isinstance(node, ContinueLoop):
+            self._loop_continue = True
+
+        elif isinstance(node, Lista):
+            return [self.avaliar_expressao(v) for v in node.elementos]
+
+        elif isinstance(node, Dicionario):
+            return {k: self.avaliar_expressao(v) for k, v in node.elementos.items()}
+
+        elif isinstance(node, AtribuicaoLista):
+            if node.lista_nome not in self.contexto:
+                raise LogicStartErro(f"Lista '{node.lista_nome}' não existe")
+            self.contexto[node.lista_nome][node.indice] = self.avaliar_expressao(node.valor)
+
+        elif isinstance(node, AtribuicaoDicionario):
+            if node.dicio_nome not in self.contexto:
+                raise LogicStartErro(f"Dicionário '{node.dicio_nome}' não existe")
+            self.contexto[node.dicio_nome][node.chave] = self.avaliar_expressao(node.valor)
+
+        elif isinstance(node, Expressao):
+            return self.avaliar_expressao(node.expressao)
 
         else:
             raise LogicStartErro(f"Node desconhecido: {node}")
 
-    # -----------------------------
-    # Avalia expressões
-    # -----------------------------
-    def avaliar_expressao(self, expr, contexto):
+    def avaliar_expressao(self, expr):
+        """Avalia expressões usando variáveis do contexto"""
         try:
-            # Substitui variáveis do contexto
-            for var in contexto:
-                expr = expr.replace(var, repr(contexto[var]))
-            # Substitui funções chamadas
-            for f in self.funcoes:
-                expr = expr.replace(f"chamar({f})", f"self.executar_funcao('{f}', [], contexto)")
-            # Avaliação segura usando eval limitado
-            return eval(expr, {"__builtins__": {}}, {})
+            if isinstance(expr, str):
+                for var in self.contexto:
+                    expr = expr.replace(var, str(self.contexto[var]))
+                return eval(expr, {}, {})
+            return expr
         except Exception:
-            # Retorna string literal se não for expressão matemática
-            return expr.strip('"').strip("'")
-
-    # -----------------------------
-    # Avalia condições
-    # -----------------------------
-    def avaliar_condicao(self, cond, contexto):
+            return expr
+       
+    def avaliar_condicao(self, cond):
+        """Avalia condições booleanas"""
         try:
-            for var in contexto:
-                cond = cond.replace(var, repr(contexto[var]))
-            return bool(eval(cond, {"__builtins__": {}}, {}))
+            if isinstance(cond, str):
+                for var in self.contexto:
+                    cond = cond.replace(var, str(self.contexto[var]))
+                return bool(eval(cond, {}, {}))
+            return bool(cond)
         except Exception:
             return False
-
-    # -----------------------------
-    # Executa função
-    # -----------------------------
-    def executar_funcao(self, nome, parametros, contexto_chamador):
-        if nome not in self.funcoes:
-            raise LogicStartErro(f"Função '{nome}' não definida")
-        func = self.funcoes[nome]
-        contexto_local = contexto_chamador.copy()
-        # Associa parâmetros
-        for i, p in enumerate(parametros):
-            if i < len(func.parametros):
-                contexto_local[func.parametros[i]] = p
-        try:
-            for n in func.bloco:
-                self.executar_node(n, contexto_local)
-        except RetornoFuncao as r:
-            return r.valor
-        return None
-
-# -----------------------------
-# Exceção interna de retorno
-# -----------------------------
-class RetornoFuncao(Exception):
-    def __init__(self, valor):
-        self.valor = valor
