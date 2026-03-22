@@ -1,7 +1,7 @@
-# app.py - LogicStart Elite Web
+# app.py - LogicStart Elite Web Integrado
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from executor_nodes import ExecutorNodes
-from nodes import Mostrar, Guardar
+from parser import Parser
 
 app = Flask(__name__)
 
@@ -36,7 +36,7 @@ def login():
     return render_template("login.html", error=error)
 
 # -------------------------
-# Guest login (botão)
+# Login Guest (botão)
 # -------------------------
 @app.route("/login/guest")
 def login_guest():
@@ -61,13 +61,8 @@ def ide():
             error = "⚠ Nenhum código inserido"
         else:
             try:
-                # Exemplo de parser simples: transformar código em nodes
-                # Para projeto real, aqui você colocaria um parser completo
-                nodes = [
-                    Guardar("x","10"),
-                    Mostrar("Olá mundo"),
-                    Mostrar("x")
-                ]
+                parser = Parser(codigo)      # Converte o código em nodes
+                nodes = parser.parse()
                 executor = ExecutorNodes(nodes)
                 resultado = executor.executar()
             except Exception as e:
@@ -97,12 +92,8 @@ def run():
         return jsonify({"success": False, "error":"Nenhum código inserido"})
     
     try:
-        # Transformar código em nodes (exemplo simples)
-        nodes = [
-            Guardar("x","10"),
-            Mostrar("Olá mundo"),
-            Mostrar("x")
-        ]
+        parser = Parser(codigo)
+        nodes = parser.parse()
         executor = ExecutorNodes(nodes)
         resultado = executor.executar()
         return jsonify({"success": True, "result": resultado})
