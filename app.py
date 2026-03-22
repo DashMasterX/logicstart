@@ -1,51 +1,79 @@
-# app.py | LogicStart Elite Web - Nível Empresa Apple Pro Max
+# app.py | LogicStart Elite - Nível Empresa Apple Pro Max / Microsoft Justos
 
-from flask import Flask, render_template, request, jsonify
-from parser import Parser
-from executor_nodes import ExecutorNodes
-from security import Security
-from errors import LogicStartErro
-
-app = Flask(__name__)
+from flask import Flask, render_template, request, redirect, url_for, session, flash
+from executor import Executor
+from security_pro_max import SecurityProMax
+from nodes import Mostrar, Guardar
+import os
 
 # =============================
-# Página Inicial / Editor
+# CONFIGURAÇÃO
+# =============================
+app = Flask(__name__)
+app.secret_key = os.urandom(24)  # Sessões seguras
+
+# Segurança Pro Max
+security = SecurityProMax()
+
+# =============================
+# PÁGINAS PRINCIPAIS
 # =============================
 @app.route("/")
 def index():
     return render_template("index.html")
 
-# =============================
-# Executar Código
-# =============================
-@app.route("/executar", methods=["POST"])
-def executar():
-    codigo = request.json.get("codigo", "")
-    
-    if not codigo.strip():
-        return jsonify({"status": "error", "saida": "⚠ Nenhum código inserido"})
-    
-    try:
-        # Verificar segurança
-        Security().verificar(codigo)
+@app.route("/login", methods=["GET", "POST"])
+def login():
+    if request.method == "POST":
+        email = request.form.get("email")
+        senha = request.form.get("senha")
+        if email and senha:
+            session["user"] = email
+            return redirect(url_for("ide"))
+        else:
+            flash("Preencha todos os campos", "error")
+    return render_template("login.html")
 
-        # Transformar em nodes via parser
-        parser = Parser(codigo)
-        nodes = parser.parse()
+@app.route("/ide", methods=["GET", "POST"])
+def ide():
+    if "user" not in session:
+        return redirect(url_for("login"))
 
-        # Executar nodes
-        executor = ExecutorNodes(nodes)
-        resultado = executor.executar()
-        
-        return jsonify({"status": "ok", "saida": resultado})
-    
-    except LogicStartErro as e:
-        return jsonify({"status": "error", "saida": f"Erro de lógica: {e}"})
-    except Exception as e:
-        return jsonify({"status": "error", "saida": f"Erro inesperado: {e}"})
+    resultado = ""
+    codigo = ""
+    if request.method == "POST":
+        codigo = request.form.get("codigo", "").strip()
+        if not codigo:
+            resultado = "⚠ Nenhum código inserido"
+        else:
+            try:
+                # Verifica código com segurança
+                security.verificar_codigo(codigo)
+
+                # Converte código simples em nodes de teste (exemplo)
+                nodes = [
+                    Mostrar("Olá mundo"),
+                    Guardar("x", "10"),
+                    Mostrar("x")
+                ]
+
+                # Executa nodes
+                executor = Executor(nodes)
+                resultado = executor.executar()
+
+            except Exception as e:
+                resultado = f"❌ Erro: {e}"
+
+    return render_template("ide.html", resultado=resultado, codigo=codigo)
+
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect(url_for("login"))
 
 # =============================
-# Rodar Servidor
+# RODANDO O APP
 # =============================
 if __name__ == "__main__":
-    app.run(host="0.0.0.0", port=80, debug=True)
+    # Porta 80 para Square Cloud
+    app.run(host="0.0.0.0", port=80)
