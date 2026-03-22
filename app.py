@@ -10,7 +10,9 @@ from executor import Executor
 # -----------------------------
 app = Flask(__name__)
 CORS(app)
-app.secret_key = os.urandom(24)
+
+# Use SECRET_KEY fixa via variável de ambiente
+app.secret_key = os.environ.get("SECRET_KEY", "uma_chave_super_secreta")
 
 # -----------------------------
 # EXECUTOR
@@ -47,10 +49,14 @@ def verificar_usuario(email, senha):
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
+# Força o redirect_uri correto (HTTPS do Square Cloud)
+redirect_uri = "https://logicstart.squareweb.app/login/google/authorized"
+
 blueprint = make_google_blueprint(
     client_id=GOOGLE_CLIENT_ID,
     client_secret=GOOGLE_CLIENT_SECRET,
-    redirect_to="login_google_redirect"
+    redirect_to="login_google_redirect",
+    redirect_url=redirect_uri
 )
 app.register_blueprint(blueprint, url_prefix="/login")
 
@@ -69,14 +75,18 @@ def login_email():
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Email ou senha incorretos"})
 
-@app.route("/login/google")
+@app.route("/login/google/redirect")
 def login_google_redirect():
-    if not google.authorized:
-        return redirect(url_for("google.login"))
-    resp = google.get("/oauth2/v2/userinfo")
-    assert resp.ok, resp.text
-    session['user'] = resp.json()['email']
-    return redirect("/ide")  # redireciona direto para IDE após login
+    try:
+        if not google.authorized:
+            return redirect(url_for("google.login"))
+        resp = google.get("/oauth2/v2/userinfo")
+        if not resp.ok:
+            return f"Erro ao obter dados do Google: {resp.text}", 500
+        session['user'] = resp.json()['email']
+        return redirect("/ide")
+    except Exception as e:
+        return f"Erro interno no login Google: {str(e)}", 500
 
 @app.route("/logout")
 def logout():
@@ -153,4 +163,4 @@ def index(path):
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
     print(f"🚀 LogicStart Elite iniciando na porta {port}")
-    app.run(host="0.0.0.0", port=port)
+    app.run(host="0.0.0.0", port=port, debug=True)
