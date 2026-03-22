@@ -1,66 +1,72 @@
-# executor.py
-import io
-import sys
-import traceback
-from security import Security
-from errors import LogicStartExecucaoErro
+# executor_nodes.py
 
-class Executor:
-    """
-    Executor seguro para o código LogicStart.
-    Suporta Python em português inteligente.
-    """
+from nodes import Mostrar, Guardar, Repetir, Condicao, Funcao, Retorna
+from errors import LogicStartErro
 
-    def __init__(self, codigo: str):
-        self.codigo = codigo
-        self.security = Security()  # Verificador de segurança
-        self.saida = ""
+class ExecutorNodes:
+    def __init__(self, nodes):
+        self.nodes = nodes
+        self.contexto = {}       # Variáveis globais
+        self.funcoes = {}        # Funções definidas
+        self.saida = []          # Armazena saída de 'mostrar'
 
-    def executar(self) -> str:
+    def executar(self):
+        for node in self.nodes:
+            self.executar_node(node)
+        return "\n".join(self.saida) or "✔ Executado com sucesso"
+
+    def executar_node(self, node):
+        if isinstance(node, Guardar):
+            valor = self.avaliar_expressao(node.valor)
+            self.contexto[node.nome] = valor
+
+        elif isinstance(node, Mostrar):
+            valor = self.avaliar_expressao(node.valor)
+            self.saida.append(str(valor))
+            print(valor)
+
+        elif isinstance(node, Repetir):
+            for _ in range(node.vezes):
+                for n in node.bloco:
+                    self.executar_node(n)
+
+        elif isinstance(node, Condicao):
+            if self.avaliar_condicao(node.condicao):
+                for n in node.bloco:
+                    self.executar_node(n)
+
+        elif isinstance(node, Funcao):
+            self.funcoes[node.nome] = node
+
+        elif isinstance(node, Retorna):
+            valor = self.avaliar_expressao(node.valor)
+            self.saida.append(str(valor))
+            print(valor)
+
+        else:
+            raise LogicStartErro(f"Node desconhecido: {node}")
+
+    def avaliar_expressao(self, expr):
         """
-        Executa o código de forma segura, capturando a saída e erros.
-        Retorna a saída do código.
-        Lança LogicStartExecucaoErro se houver falha.
+        Avalia expressões simples usando variáveis do contexto.
         """
         try:
-            # Verifica segurança antes de executar
-            self.security.verificar(self.codigo)
+            # Substitui variáveis
+            for var in self.contexto:
+                expr = expr.replace(var, str(self.contexto[var]))
+            # Avalia matemática simples
+            return eval(expr, {}, {})
+        except:
+            # Retorna string literal se não for expressão matemática
+            return expr.strip('"').strip("'")
 
-            # Redireciona stdout
-            buffer = io.StringIO()
-            old_stdout = sys.stdout
-            sys.stdout = buffer
-
-            # Ambiente seguro limitado
-            ambiente = {
-                "__builtins__": {
-                    "print": print,
-                    "len": len,
-                    "range": range,
-                    "int": int,
-                    "float": float,
-                    "str": str,
-                    "bool": bool,
-                    "list": list,
-                    "dict": dict,
-                    "set": set,
-                    "tuple": tuple,
-                    # Adicione outras funções seguras que quiser
-                }
-            }
-
-            # Executa o código
-            exec(self.codigo, ambiente)
-
-            # Captura saída
-            self.saida = buffer.getvalue()
-            return self.saida or "✔ Executado com sucesso"
-
-        except Exception as e:
-            # Captura traceback e lança erro customizado
-            tb = traceback.format_exc()
-            raise LogicStartExecucaoErro(-1, f"{str(e)}\n{tb}") from e
-
-        finally:
-            # Restaura stdout
-            sys.stdout = old_stdout
+    def avaliar_condicao(self, cond):
+        """
+        Avalia condições como se x > 5
+        """
+        try:
+            for var in self.contexto:
+                cond = cond.replace(var, str(self.contexto[var]))
+            return bool(eval(cond, {}, {}))
+        except:
+            return False
