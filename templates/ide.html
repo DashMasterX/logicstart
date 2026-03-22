@@ -3,49 +3,52 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite Imperium - IDE</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+<title>LogicStart IDE - Pydroid Style</title>
+
+<!-- CodeMirror CDN -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
+
 <style>
-:root {
-    --primary: #3a78d7;
-    --secondary: #ff5555;
-    --bg-gradient: linear-gradient(135deg, #0c0c0c, #1f1f1f);
-    --input-bg: #121212;
-    --input-border: #444;
-    --text-color: #e0e0e0;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-
 body {
-    background: var(--bg-gradient);
-    color: var(--text-color);
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: #1e1e1e;
+    color: #d4d4d4;
     display: flex;
     flex-direction: column;
     height: 100vh;
 }
 
 header {
-    background: #1b1b1b;
-    padding: 15px 30px;
-    font-weight: 600;
-    font-size: 20px;
+    background: #2b2b2b;
+    padding: 10px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    box-shadow: 0 3px 6px rgba(0,0,0,0.4);
 }
 
-header button {
-    background: var(--primary);
-    color: white;
+header h1 {
+    font-size: 18px;
+    margin: 0;
+    color: #569CD6;
+}
+
+.menu button {
+    background: #3a3a3a;
     border: none;
-    padding: 8px 14px;
-    border-radius: 6px;
+    color: #d4d4d4;
+    padding: 6px 12px;
+    margin-left: 5px;
+    border-radius: 4px;
     cursor: pointer;
     transition: 0.2s;
 }
-header button:hover { background: #2b5ea0; }
+
+.menu button:hover {
+    background: #505050;
+}
 
 .container {
     display: flex;
@@ -53,165 +56,143 @@ header button:hover { background: #2b5ea0; }
     overflow: hidden;
 }
 
-textarea {
-    width: 50%;
-    padding: 15px;
-    border: none;
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: 16px;
-    resize: none;
-    outline: none;
+#editor {
+    flex: 2;
+    height: 100%;
 }
 
-#output {
-    width: 50%;
-    padding: 15px;
-    background: #1e1e1e;
-    color: #fff;
+.CodeMirror {
+    height: 100%;
     font-family: monospace;
-    overflow-y: auto;
-}
-
-button#run-btn {
-    margin-top: 10px;
-    background: var(--primary);
-    color: white;
-    border: none;
-    padding: 10px 16px;
-    border-radius: 6px;
-    cursor: pointer;
-    font-weight: 600;
-}
-button#run-btn:hover { background: #2b5ea0; transform: translateY(-1px); }
-
-.history-panel {
-    position: absolute;
-    right: 0;
-    top: 60px;
-    width: 300px;
-    height: calc(100% - 60px);
-    background: #1b1b1b;
-    padding: 15px;
-    overflow-y: auto;
-    border-left: 1px solid #333;
-}
-
-.history-panel h3 {
-    margin-bottom: 10px;
-    font-size: 16px;
-    font-weight: 600;
-}
-
-.history-item {
-    background: #262626;
-    padding: 8px;
-    margin-bottom: 8px;
-    border-radius: 6px;
-    cursor: pointer;
     font-size: 14px;
-    transition: 0.2s;
+    background: #1e1e1e;
+    color: #d4d4d4;
 }
-.history-item:hover { background: #333; }
 
-.loader {
-    display: none;
-    color: #aaa;
-    font-size: 13px;
-    margin-top: 5px;
+.cm-keyword { color: #569CD6; }
+.cm-string { color: #D69D85; }
+.cm-comment { color: #6A9955; }
+.cm-number { color: #B5CEA8; }
+.cm-def { color: #DCDCAA; }
+
+.sidebar {
+    flex: 1;
+    background: #252525;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    overflow-y: auto;
 }
-.error {
-    color: var(--secondary);
+
+.sidebar h2 {
+    margin-top: 0;
+    color: #569CD6;
+    font-size: 16px;
+}
+
+.output {
+    background: #111;
+    color: #d4d4d4;
+    flex: 1;
+    margin-top: 10px;
+    padding: 10px;
+    border-radius: 5px;
+    font-family: monospace;
     font-size: 13px;
-    margin-top: 5px;
+    white-space: pre-wrap;
+    overflow-y: auto;
 }
 </style>
 </head>
 <body>
 
 <header>
-    <span>LogicStart Elite IDE</span>
-    <button onclick="logout()">Sair</button>
+    <h1>LogicStart IDE</h1>
+    <div class="menu">
+        <button onclick="novo()">Novo</button>
+        <button onclick="abrir()">Abrir</button>
+        <button onclick="salvar()">Salvar</button>
+        <button onclick="executar()">Executar</button>
+        <button onclick="mostrarHistorico()">Histórico</button>
+        <button onclick="toggleTema()">Tema</button>
+    </div>
 </header>
 
 <div class="container">
-    <div style="position: relative; width: 50%;">
-        <textarea id="code" placeholder="Digite seu código Python aqui..." spellcheck="false"></textarea>
-        <button id="run-btn" onclick="runCode()">Executar</button>
-        <div class="loader" id="loader">Executando...</div>
-        <div class="error" id="error"></div>
+    <textarea id="editor"></textarea>
+    <div class="sidebar">
+        <h2>Saída</h2>
+        <div class="output" id="saida"></div>
     </div>
-    <div id="output"></div>
-</div>
-
-<div class="history-panel" id="history-panel">
-    <h3>Histórico de códigos</h3>
-    <div id="history-list"></div>
 </div>
 
 <script>
-function setLoading(state) {
-    document.getElementById("loader").style.display = state ? "block" : "none";
+let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+    mode: "python",
+    lineNumbers: true,
+    theme: "default",
+    indentUnit: 4,
+    tabSize: 4,
+    indentWithTabs: true,
+});
+
+function novo() {
+    if(confirm("Deseja limpar o editor?")) editor.setValue("");
 }
 
-function setError(msg) {
-    document.getElementById("error").textContent = msg || "";
+function abrir() {
+    alert("Função Abrir: você pode implementar upload de arquivos .py aqui.");
 }
 
-function runCode() {
-    const code = document.getElementById("code").value;
-    if(!code) { setError("Digite algum código"); return; }
+function salvar() {
+    const codigo = editor.getValue();
+    const email = prompt("Digite seu e-mail para salvar:");
+    if(!email) return;
 
-    setError(""); setLoading(true);
-    fetch("/run", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({code})
-    })
-    .then(res => res.json())
-    .then(data => {
-        setLoading(false);
-        if(data.success) {
-            document.getElementById("output").textContent = data.result;
-            saveCode(code);
-        } else {
-            setError(data.error || "Erro ao executar");
-            document.getElementById("output").textContent = data.debug || "";
-        }
-    })
-    .catch(() => { setLoading(false); setError("Erro de conexão"); });
-}
-
-function saveCode(code) {
     fetch("/save", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({code})
-    }).then(() => loadHistory());
-}
-
-function loadHistory() {
-    fetch("/history")
-    .then(res => res.json())
-    .then(data => {
-        const list = document.getElementById("history-list");
-        list.innerHTML = "";
-        data.reverse().forEach(item => {
-            const div = document.createElement("div");
-            div.className = "history-item";
-            div.textContent = item.codigo.substring(0, 50) + (item.codigo.length > 50 ? "..." : "");
-            div.onclick = () => document.getElementById("code").value = item.codigo;
-            list.appendChild(div);
-        });
+        body: JSON.stringify({code: codigo, email})
+    }).then(res=>res.json())
+    .then(data=>{
+        alert(data.success ? "Código salvo!" : data.error);
     });
 }
 
-function logout() {
-    fetch("/logout").then(() => window.location.href = "/");
+function executar() {
+    const codigo = editor.getValue();
+    fetch("/run", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: codigo})
+    }).then(res=>res.json())
+    .then(data=>{
+        document.getElementById("saida").textContent = data.success ? data.result : data.error;
+    });
 }
 
-// Inicializa histórico
-loadHistory();
+function mostrarHistorico() {
+    fetch("/history").then(res=>res.json())
+    .then(data=>{
+        let out = data.map(d => d.codigo).join("\n\n---\n\n");
+        document.getElementById("saida").textContent = out || "Sem histórico";
+    });
+}
+
+function toggleTema() {
+    const body = document.body;
+    if(body.style.background === "rgb(30, 30, 30)") {
+        body.style.background = "#f5f5f5";
+        editor.getWrapperElement().style.background = "#fff";
+        editor.getWrapperElement().style.color = "#000";
+        editor.setOption("theme", "default");
+    } else {
+        body.style.background = "#1e1e1e";
+        editor.getWrapperElement().style.background = "#1e1e1e";
+        editor.getWrapperElement().style.color = "#d4d4d4";
+        editor.setOption("theme", "default");
+    }
+}
 </script>
 
 </body>
