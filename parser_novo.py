@@ -1,59 +1,20 @@
-# parser_executor_pro.py
+# parser_novo.py
 
 import re
-from copy import deepcopy
+from nodes import (
+    Mostrar, Guardar, Repetir, Enquanto, Condicao, SeSenao,
+    Funcao, Retorna, ChamadaFuncao, Lista, Dicionario, AtribuicaoLista,
+    AtribuicaoDicionario, Expressao
+)
+from errors import LogicStartErro
 
-# -----------------------------
-# Nodes
-# -----------------------------
-class Guardar:
-    def __init__(self, nome, valor):
-        self.nome = nome
-        self.valor = valor
+class ParserNovo:
+    """
+    Parser avançado do LogicStart Elite.
+    Converte código em nodes para o ExecutorNodes processar.
+    """
 
-class Mostrar:
-    def __init__(self, valor):
-        self.valor = valor
-
-class Repetir:
-    def __init__(self, vezes, bloco):
-        self.vezes = vezes
-        self.bloco = bloco
-
-class Enquanto:
-    def __init__(self, condicao, bloco):
-        self.condicao = condicao
-        self.bloco = bloco
-
-class Condicao:
-    def __init__(self, condicao, bloco):
-        self.condicao = condicao
-        self.bloco = bloco
-
-class Funcao:
-    def __init__(self, nome, parametros, bloco):
-        self.nome = nome
-        self.parametros = parametros
-        self.bloco = bloco
-
-class Retorna(Exception):
-    def __init__(self, valor):
-        self.valor = valor
-
-class ChamadaFuncao:
-    def __init__(self, nome, parametros):
-        self.nome = nome
-        self.parametros = parametros
-
-class Expressao:
-    def __init__(self, expressao):
-        self.expressao = expressao
-
-# -----------------------------
-# Parser Pro
-# -----------------------------
-class ParserExecutorPro:
-    def __init__(self, codigo):
+    def __init__(self, codigo: str):
         self.codigo = codigo.splitlines()
         self.pos = 0
 
@@ -61,32 +22,30 @@ class ParserExecutorPro:
         nodes = []
         while self.pos < len(self.codigo):
             linha = self.codigo[self.pos].split("//")[0].strip()
-            if linha:
-                nodes.append(self.parse_linha(linha))
+            if not linha:
+                self.pos += 1
+                continue
+            node = self.parse_linha(linha)
+            if node:
+                nodes.append(node)
             self.pos += 1
         return nodes
 
     def parse_linha(self, linha):
         linha = linha.strip()
 
-        # variavel x = 10
+        # Guardar variável: variavel x = 10
         match_var = re.match(r'^variavel\s+(\w+)\s*=\s*(.+)$', linha, re.IGNORECASE)
         if match_var:
             nome, valor = match_var.groups()
-            # Se for chamada de função dentro da atribuição
-            match_call = re.match(r'^chamar\s+(\w+)\((.*)\)$', valor.strip())
-            if match_call:
-                func_nome, params = match_call.groups()
-                parametros = [p.strip() for p in params.split(",") if p.strip()]
-                return Guardar(nome, ChamadaFuncao(func_nome, parametros))
             return Guardar(nome, valor.strip())
 
-        # mostrar(x)
+        # Mostrar: mostrar("texto")
         match_mostrar = re.match(r'^mostrar\((.+)\)$', linha, re.IGNORECASE)
         if match_mostrar:
             return Mostrar(match_mostrar.group(1).strip())
 
-        # repetir N
+        # Repetir loop: repetir 5
         match_repetir = re.match(r'^repetir\s+(\d+)$', linha, re.IGNORECASE)
         if match_repetir:
             vezes = int(match_repetir.group(1))
@@ -94,7 +53,7 @@ class ParserExecutorPro:
             bloco = self.parse_bloco("fim repetir")
             return Repetir(vezes, bloco)
 
-        # enquanto condicao
+        # Enquanto loop: enquanto x < 10
         match_enquanto = re.match(r'^enquanto\s+(.+)$', linha, re.IGNORECASE)
         if match_enquanto:
             condicao = match_enquanto.group(1).strip()
@@ -102,7 +61,7 @@ class ParserExecutorPro:
             bloco = self.parse_bloco("fim enquanto")
             return Enquanto(condicao, bloco)
 
-        # se condicao
+        # Condicional simples: se x > 5
         match_se = re.match(r'^se\s+(.+)$', linha, re.IGNORECASE)
         if match_se:
             condicao = match_se.group(1).strip()
@@ -110,7 +69,17 @@ class ParserExecutorPro:
             bloco = self.parse_bloco("fim se")
             return Condicao(condicao, bloco)
 
-        # funcao nome(param1, param2)
+        # Condicional com else: se x > 5 senao
+        match_senao = re.match(r'^se\s+(.+)\s+senao$', linha, re.IGNORECASE)
+        if match_senao:
+            condicao = match_senao.group(1).strip()
+            self.pos += 1
+            bloco_true = self.parse_bloco("senao")
+            self.pos += 1
+            bloco_false = self.parse_bloco("fim se")
+            return SeSenao(condicao, bloco_true, bloco_false)
+
+        # Função: funcao soma(a,b)
         match_func = re.match(r'^funcao\s+(\w+)\((.*?)\)$', linha, re.IGNORECASE)
         if match_func:
             nome, params = match_func.groups()
@@ -119,19 +88,46 @@ class ParserExecutorPro:
             bloco = self.parse_bloco("fim funcao")
             return Funcao(nome, parametros, bloco)
 
-        # chamar funcao(param1, param2)
-        match_call = re.match(r'^chamar\s+(\w+)\((.*)\)$', linha, re.IGNORECASE)
+        # Chamada de função: chamar soma(5,10)
+        match_call = re.match(r'^chamar\s+(\w+)\((.*?)\)$', linha, re.IGNORECASE)
         if match_call:
             nome, params = match_call.groups()
             parametros = [p.strip() for p in params.split(",") if p.strip()]
             return ChamadaFuncao(nome, parametros)
 
-        # retorna x
+        # Retorna: retorna x
         match_retorna = re.match(r'^retorna\s+(.+)$', linha, re.IGNORECASE)
         if match_retorna:
             return Retorna(match_retorna.group(1).strip())
 
-        # expressão simples
+        # Lista: lista x = [1,2,3]
+        match_lista = re.match(r'^lista\s+(\w+)\s*=\s*\[(.*)\]$', linha, re.IGNORECASE)
+        if match_lista:
+            nome, elementos = match_lista.groups()
+            elementos = [e.strip() for e in elementos.split(",") if e.strip()]
+            return Guardar(nome, Lista(elementos))
+
+        # Dicionário: dicio y = {a:1,b:2}
+        match_dicio = re.match(r'^dicio\s+(\w+)\s*=\s*\{(.+)\}$', linha, re.IGNORECASE)
+        if match_dicio:
+            nome, conteudo = match_dicio.groups()
+            elementos = {}
+            for par in conteudo.split(","):
+                if ":" in par:
+                    k,v = par.split(":",1)
+                    elementos[k.strip()] = v.strip()
+            return Guardar(nome, Dicionario(elementos))
+
+        # Atribuição de lista/dicionário: x[0] = 10 ou y["chave"] = valor
+        match_atr = re.match(r'^(\w+)\[(.+)\]\s*=\s*(.+)$', linha)
+        if match_atr:
+            nome, chave, valor = match_atr.groups()
+            # Detectar se é lista ou dicionário
+            if chave.startswith('"') or chave.startswith("'"):
+                return AtribuicaoDicionario(nome.strip(), chave.strip(), valor.strip())
+            return AtribuicaoLista(nome.strip(), chave.strip(), valor.strip())
+
+        # Expressão genérica
         return Expressao(linha)
 
     def parse_bloco(self, fim_comando):
@@ -141,96 +137,8 @@ class ParserExecutorPro:
             linha = self.codigo[self.pos].split("//")[0].strip()
             if linha.lower() == fim_comando:
                 return bloco
-            bloco.append(self.parse_linha(linha))
+            node = self.parse_linha(linha)
+            if node:
+                bloco.append(node)
             self.pos += 1
-        raise Exception(f"Bloco não fechado: {fim_comando}")
-
-# -----------------------------
-# Executor Pro
-# -----------------------------
-class ExecutorPro:
-    def __init__(self, nodes):
-        self.nodes = nodes
-        self.contexto = {}
-        self.funcoes = {}
-        self.saida = []
-
-    def executar(self):
-        self._executar_bloco(self.nodes, self.contexto)
-        return "\n".join(str(x) for x in self.saida)
-
-    def _executar_bloco(self, bloco, contexto):
-        i = 0
-        while i < len(bloco):
-            node = bloco[i]
-
-            if isinstance(node, Guardar):
-                contexto[node.nome] = self._avaliar(node.valor, contexto)
-
-            elif isinstance(node, Mostrar):
-                valor = self._avaliar(node.valor, contexto)
-                self.saida.append(valor)
-
-            elif isinstance(node, Repetir):
-                for _ in range(node.vezes):
-                    self._executar_bloco(deepcopy(node.bloco), deepcopy(contexto))
-
-            elif isinstance(node, Enquanto):
-                while self._avaliar(node.condicao, contexto):
-                    self._executar_bloco(deepcopy(node.bloco), deepcopy(contexto))
-
-            elif isinstance(node, Condicao):
-                if self._avaliar(node.condicao, contexto):
-                    self._executar_bloco(deepcopy(node.bloco), deepcopy(contexto))
-
-            elif isinstance(node, Funcao):
-                self.funcoes[node.nome] = node
-
-            elif isinstance(node, ChamadaFuncao):
-                if node.nome not in self.funcoes:
-                    raise Exception(f"Função '{node.nome}' não definida")
-                func = self.funcoes[node.nome]
-                novo_contexto = deepcopy(contexto)
-                for nome_param, valor_param in zip(func.parametros, node.parametros):
-                    novo_contexto[nome_param] = self._avaliar(valor_param, contexto)
-                try:
-                    self._executar_bloco(func.bloco, novo_contexto)
-                except Retorna as r:
-                    return r.valor
-
-            elif isinstance(node, Retorna):
-                valor = self._avaliar(node.valor, contexto)
-                raise Retorna(valor)
-
-            elif isinstance(node, Expressao):
-                self._avaliar(node.expressao, contexto)
-
-            i += 1
-
-    def _avaliar(self, expr, contexto):
-        if isinstance(expr, (int, float, bool)):
-            return expr
-        if isinstance(expr, ChamadaFuncao):
-            return self._executar_chamada(expr, contexto)
-        if isinstance(expr, str):
-            # substituir variáveis
-            for var in contexto:
-                expr = re.sub(rf'\b{var}\b', str(contexto[var]), expr)
-            try:
-                return eval(expr, {"__builtins__": {}})
-            except:
-                return expr
-        return expr
-
-    def _executar_chamada(self, chamada, contexto):
-        if chamada.nome not in self.funcoes:
-            raise Exception(f"Função '{chamada.nome}' não definida")
-        func = self.funcoes[chamada.nome]
-        novo_contexto = deepcopy(contexto)
-        for nome_param, valor_param in zip(func.parametros, chamada.parametros):
-            novo_contexto[nome_param] = self._avaliar(valor_param, contexto)
-        try:
-            self._executar_bloco(func.bloco, novo_contexto)
-        except Retorna as r:
-            return r.valor
-        return None
+        raise LogicStartErro(f"Bloco não fechado. Esperado: '{fim_comando}'")
