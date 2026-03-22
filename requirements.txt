@@ -1,7 +1,6 @@
 flask
 flask-cors
-flask-dance
 flask-session
-pymongo
 requests
 requests-oauthlib
+pymongo
