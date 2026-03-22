@@ -1,7 +1,8 @@
 # app.py - LogicStart Elite Web Integrado
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from executor_nodes import ExecutorNodes
-from parser import Parser
+from parser_novo import ParserNovo  # <-- parser atualizado
+from nodes import Mostrar, Guardar
 
 app = Flask(__name__)
 
@@ -20,7 +21,7 @@ def index():
     return redirect(url_for("login"))
 
 # -------------------------
-# Login
+# Login padrão
 # -------------------------
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -36,7 +37,7 @@ def login():
     return render_template("login.html", error=error)
 
 # -------------------------
-# Login Guest (botão)
+# Login Guest
 # -------------------------
 @app.route("/login/guest")
 def login_guest():
@@ -61,7 +62,7 @@ def ide():
             error = "⚠ Nenhum código inserido"
         else:
             try:
-                parser = Parser(codigo)      # Converte o código em nodes
+                parser = ParserNovo(codigo)
                 nodes = parser.parse()
                 executor = ExecutorNodes(nodes)
                 resultado = executor.executar()
@@ -92,7 +93,7 @@ def run():
         return jsonify({"success": False, "error":"Nenhum código inserido"})
     
     try:
-        parser = Parser(codigo)
+        parser = ParserNovo(codigo)
         nodes = parser.parse()
         executor = ExecutorNodes(nodes)
         resultado = executor.executar()
@@ -101,7 +102,7 @@ def run():
         return jsonify({"success": False, "error": str(e)})
 
 # -------------------------
-# API para salvar código (opcional)
+# API para salvar código
 # -------------------------
 @app.route("/save", methods=["POST"])
 def save():
@@ -118,7 +119,7 @@ def save():
         return jsonify({"success": False, "error": str(e)})
 
 # -------------------------
-# Rodar app na Square Cloud porta 80
+# Rodar app na Square Cloud na porta 80
 # -------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
