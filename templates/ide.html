@@ -3,62 +3,101 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart IDE Pro Max</title>
+<title>LogicStart Elite Pro</title>
+
+<!-- CodeMirror -->
 <link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
 <link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css" rel="stylesheet">
+
 <style>
+/* ---------- BODY ---------- */
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: #282a36;
+    background: #1e1e2f;
     color: #f8f8f2;
     height: 100vh;
     display: flex;
     flex-direction: column;
 }
 
+/* ---------- HEADER ---------- */
 header {
-    background: #44475a;
+    background: #282a36;
     padding: 12px 20px;
     font-size: 1.5em;
     display: flex;
     justify-content: space-between;
     align-items: center;
+    box-shadow: 0 3px 10px rgba(0,0,0,0.3);
 }
 
-header button {
-    background: #6272a4;
+header .btn {
+    border-radius: 50%;
+    width: 45px;
+    height: 45px;
+    padding: 0;
+    font-size: 1.2em;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.3s ease;
+    cursor: pointer;
+    margin-left: 8px;
     border: none;
     color: white;
-    padding: 6px 12px;
-    margin-left: 8px;
-    cursor: pointer;
-    border-radius: 4px;
-    transition: 0.2s;
 }
 
-header button:hover {
-    background: #50577a;
+header .btn:hover {
+    transform: scale(1.2) rotate(10deg);
+    box-shadow: 0 0 15px #6272a4;
 }
 
+header .btn-executar { background: #50fa7b; color: #000; }
+header .btn-salvar   { background: #ffb86c; }
+header .btn-limpar   { background: #ff5555; }
+
+/* ---------- MAIN ---------- */
 .main-container {
     flex: 1;
     display: flex;
-    flex-direction: row;
     overflow: hidden;
 }
 
+/* ---------- EDITOR ---------- */
 #editor-container {
     flex: 2;
     display: flex;
     flex-direction: column;
+    border-right: 2px solid #44475a;
+    position: relative;
 }
 
-#editor {
-    flex: 1;
-    height: 100%;
+/* ---------- MENU EDITOR ---------- */
+.menu {
+    display: flex;
+    gap: 8px;
+    padding: 5px;
+    background: #282a36;
 }
 
+.menu button {
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    border: none;
+    background: #6272a4;
+    color: white;
+    font-size: 0.9em;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.menu button:hover {
+    transform: scale(1.2);
+    box-shadow: 0 0 10px #50fa7b;
+}
+
+/* ---------- OUTPUT ---------- */
 #output-container {
     flex: 1;
     background: #1e1e2f;
@@ -66,60 +105,84 @@ header button:hover {
     overflow-y: auto;
     font-family: monospace;
     font-size: 14px;
+    border-left: 2px solid #44475a;
+    display: flex;
+    flex-direction: column;
 }
 
-.menu {
-    display: flex;
-    gap: 8px;
-    margin-bottom: 5px;
+/* ---------- VARIÁVEIS ---------- */
+#vars-panel {
+    position: absolute;
+    top: 50px;
+    right: -250px;
+    width: 250px;
+    height: calc(100% - 50px);
+    background: #282a36;
+    padding: 10px;
+    border-left: 2px solid #6272a4;
+    transition: right 0.3s ease;
+    overflow-y: auto;
+    box-shadow: -5px 0 15px rgba(0,0,0,0.5);
 }
-.menu button {
-    background: #6272a4;
-    border: none;
-    color: white;
-    padding: 5px 10px;
-    border-radius: 4px;
-    cursor: pointer;
+
+#vars-panel.show {
+    right: 0;
 }
-.menu button:hover {
-    background: #50577a;
+
+#vars-panel h3 {
+    margin-top: 0;
+    color: #50fa7b;
+    text-align: center;
 }
+
+/* ---------- OUTPUT TYPES ---------- */
+.output-success { color: #50fa7b; }
+.output-error   { color: #ff5555; }
+.output-info    { color: #8be9fd; }
+
 </style>
 </head>
 <body>
 
 <header>
-    <div>LogicStart IDE Pro Max</div>
+    <div>LogicStart Elite Pro</div>
     <div>
-        <button onclick="executarCodigo()">Executar ▶</button>
-        <button onclick="salvarCodigo()">Salvar 💾</button>
-        <button onclick="limparSaida()">Limpar Saída 🗑</button>
+        <button class="btn btn-executar" onclick="executarCodigo()">▶</button>
+        <button class="btn btn-salvar" onclick="salvarCodigo()">💾</button>
+        <button class="btn btn-limpar" onclick="limparSaida()">🗑</button>
+        <button class="btn" onclick="toggleVars()">📊</button>
     </div>
 </header>
 
 <div class="main-container">
     <div id="editor-container">
         <div class="menu">
-            <button onclick="inserirComando('variavel x = 0')">Variável</button>
-            <button onclick="inserirComando('imprimir()')">Imprimir</button>
-            <button onclick="inserirComando('se x > 0:')">Se</button>
-            <button onclick="inserirComando('retorna')">Retorna</button>
+            <button onclick="inserirComando('variavel x = 0')">V</button>
+            <button onclick="inserirComando('mostrar()')">M</button>
+            <button onclick="inserirComando('se x > 0:')">S</button>
+            <button onclick="inserirComando('retorna')">R</button>
         </div>
         <textarea id="editor"></textarea>
+        <div id="vars-panel">
+            <h3>Variáveis</h3>
+            <div id="vars-list"></div>
+        </div>
     </div>
     <div id="output-container"></div>
 </div>
 
+<!-- CodeMirror JS -->
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
+
 <script>
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-    mode: {name: "python", version: 3, singleLineStringErrors: false},
+    mode: {name: "python", version: 3},
     theme: "dracula",
     lineNumbers: true,
     indentUnit: 4,
     tabSize: 4,
-    lineWrapping: true,
+    lineWrapping: true
 });
 
 function inserirComando(texto) {
@@ -132,7 +195,7 @@ function inserirComando(texto) {
 function executarCodigo() {
     let codigo = editor.getValue();
     let output = document.getElementById("output-container");
-    output.innerHTML += "<div style='color:#50fa7b'>> Executando...</div>";
+    output.innerHTML += "<div class='output-info'>▶ Executando...</div>";
 
     fetch("/run", {
         method: "POST",
@@ -142,14 +205,15 @@ function executarCodigo() {
     .then(res => res.json())
     .then(data => {
         if(data.success){
-            output.innerHTML += "<div>" + data.result.replace(/\n/g,"<br>") + "</div>";
+            output.innerHTML += "<div class='output-success'>" + data.result.replace(/\n/g,"<br>") + "</div>";
+            atualizarVars(data.vars || {});
         } else {
-            output.innerHTML += "<div style='color:#ff5555'>Erro: " + data.error + "</div>";
+            output.innerHTML += "<div class='output-error'>❌ " + data.error + "</div>";
         }
         output.scrollTop = output.scrollHeight;
     })
     .catch(err => {
-        output.innerHTML += "<div style='color:#ff5555'>Erro conexão servidor</div>";
+        output.innerHTML += "<div class='output-error'>❌ Erro conexão servidor</div>";
         output.scrollTop = output.scrollHeight;
     });
 }
@@ -163,12 +227,27 @@ function salvarCodigo() {
     })
     .then(res => res.json())
     .then(data => {
-        alert(data.success ? "Código salvo!" : data.error);
+        alert(data.success ? "✔ Código salvo!" : data.error);
     });
 }
 
 function limparSaida() {
     document.getElementById("output-container").innerHTML = "";
+}
+
+function toggleVars() {
+    document.getElementById("vars-panel").classList.toggle("show");
+}
+
+function atualizarVars(vars) {
+    let list = document.getElementById("vars-list");
+    list.innerHTML = "";
+    for(let key in vars){
+        let val = JSON.stringify(vars[key]);
+        let div = document.createElement("div");
+        div.textContent = key + " = " + val;
+        list.appendChild(div);
+    }
 }
 </script>
 
