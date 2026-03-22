@@ -1,8 +1,9 @@
+# app.py - LogicStart Elite Web
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from executor_nodes import ExecutorNodes
 from nodes import Mostrar, Guardar
 
-app = Flask(__name__, template_folder="templates")  # Certifique-se que a pasta 'templates' existe
+app = Flask(__name__)
 
 # -------------------------
 # Sessão simples
@@ -10,10 +11,12 @@ app = Flask(__name__, template_folder="templates")  # Certifique-se que a pasta 
 SESSAO = {"logado": False}
 
 # -------------------------
-# Rota inicial
+# Rota principal
 # -------------------------
 @app.route("/")
 def index():
+    if SESSAO.get("logado"):
+        return redirect(url_for("ide"))
     return redirect(url_for("login"))
 
 # -------------------------
@@ -23,8 +26,8 @@ def index():
 def login():
     error = ""
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        senha = request.form.get("senha", "").strip()
+        email = request.form.get("email","").strip()
+        senha = request.form.get("senha","").strip()
         if (email == "admin" and senha == "1234") or (email == "" and senha == ""):
             SESSAO["logado"] = True
             return redirect(url_for("ide"))
@@ -33,41 +36,44 @@ def login():
     return render_template("login.html", error=error)
 
 # -------------------------
+# Guest login (botão)
+# -------------------------
+@app.route("/login/guest")
+def login_guest():
+    SESSAO["logado"] = True
+    return redirect(url_for("ide"))
+
+# -------------------------
 # IDE
 # -------------------------
-@app.route("/ide")
+@app.route("/ide", methods=["GET", "POST"])
 def ide():
     if not SESSAO.get("logado"):
         return redirect(url_for("login"))
-    return render_template("ide.html", resultado="", codigo="", error="")
 
-# -------------------------
-# Rota para executar código
-# -------------------------
-@app.route("/run", methods=["POST"])
-def run_code():
-    if not SESSAO.get("logado"):
-        return jsonify({"success": False, "error": "Não logado"})
+    resultado = ""
+    codigo = ""
+    error = ""
 
-    data = request.get_json()
-    codigo = data.get("code", "").strip()
+    if request.method == "POST":
+        codigo = request.form.get("codigo","").strip()
+        if not codigo:
+            error = "⚠ Nenhum código inserido"
+        else:
+            try:
+                # Exemplo de parser simples: transformar código em nodes
+                # Para projeto real, aqui você colocaria um parser completo
+                nodes = [
+                    Guardar("x","10"),
+                    Mostrar("Olá mundo"),
+                    Mostrar("x")
+                ]
+                executor = ExecutorNodes(nodes)
+                resultado = executor.executar()
+            except Exception as e:
+                resultado = f"Erro: {e}"
 
-    if not codigo:
-        return jsonify({"success": False, "error": "Nenhum código fornecido"})
-
-    try:
-        # Aqui você pode colocar o seu parser real
-        # Por enquanto, exemplo de nodes simples:
-        nodes = [
-            Guardar("x", "10"),
-            Mostrar("Olá mundo"),
-            Mostrar("x")
-        ]
-        executor = ExecutorNodes(nodes)
-        resultado = executor.executar()
-        return jsonify({"success": True, "result": resultado})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+    return render_template("ide.html", resultado=resultado, codigo=codigo, error=error)
 
 # -------------------------
 # Logout
@@ -78,7 +84,50 @@ def logout():
     return redirect(url_for("login"))
 
 # -------------------------
-# Rodar app no Square Cloud porta 80
+# API para executar código via fetch (IDE JS)
+# -------------------------
+@app.route("/run", methods=["POST"])
+def run():
+    if not SESSAO.get("logado"):
+        return jsonify({"success": False, "error":"Usuário não logado"})
+    
+    data = request.get_json()
+    codigo = data.get("code","").strip()
+    if not codigo:
+        return jsonify({"success": False, "error":"Nenhum código inserido"})
+    
+    try:
+        # Transformar código em nodes (exemplo simples)
+        nodes = [
+            Guardar("x","10"),
+            Mostrar("Olá mundo"),
+            Mostrar("x")
+        ]
+        executor = ExecutorNodes(nodes)
+        resultado = executor.executar()
+        return jsonify({"success": True, "result": resultado})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+# -------------------------
+# API para salvar código (opcional)
+# -------------------------
+@app.route("/save", methods=["POST"])
+def save():
+    if not SESSAO.get("logado"):
+        return jsonify({"success": False, "error":"Usuário não logado"})
+    
+    data = request.get_json()
+    codigo = data.get("code","").strip()
+    try:
+        with open("codigo_salvo.txt","w",encoding="utf-8") as f:
+            f.write(codigo)
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
+
+# -------------------------
+# Rodar app na Square Cloud porta 80
 # -------------------------
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=80)
