@@ -1,6 +1,7 @@
 import os
 import time
 import traceback
+from functools import wraps
 
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
@@ -8,97 +9,97 @@ from flask_dance.contrib.google import make_google_blueprint, google
 from pymongo import MongoClient
 from executor import Executor
 
-# -----------------------------
-# CONFIG APP
-# -----------------------------
+# =============================
+# CONFIGURAÇÃO BASE
+# =============================
+class Config:
+    SECRET_KEY = os.environ.get("SECRET_KEY", "super_secret")
+    MONGO_URI = os.environ.get("MONGO_URI")
+    GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
+    GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
+
+    SESSION_COOKIE_SECURE = False
+    SESSION_COOKIE_SAMESITE = "Lax"
+
+# =============================
+# APP INIT
+# =============================
 app = Flask(__name__)
+app.config.from_object(Config)
 CORS(app)
 
-app.secret_key = os.environ.get("SECRET_KEY", "logicstart_super_secret")
-
-# 🔥 CONFIG ESTÁVEL (SEM BUG DE LOGIN)
-app.config.update(
-    SESSION_COOKIE_SECURE=False,
-    SESSION_COOKIE_SAMESITE="Lax"
-)
-
-# -----------------------------
-# DATABASE (MONGO)
-# -----------------------------
-MONGO_URI = os.environ.get("MONGO_URI")
-
-if not MONGO_URI:
+# =============================
+# DATABASE
+# =============================
+if not Config.MONGO_URI:
     raise Exception("MONGO_URI não configurado")
 
-client = MongoClient(MONGO_URI)
-db = client["logicstart_empire"]
+client = MongoClient(Config.MONGO_URI)
+db = client["logicstart_microsoft"]
 
 users = db["users"]
 history = db["history"]
 
-# -----------------------------
-# GOOGLE LOGIN
-# -----------------------------
-GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
-GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
-
-if not GOOGLE_CLIENT_ID or not GOOGLE_CLIENT_SECRET:
+# =============================
+# GOOGLE AUTH
+# =============================
+if not Config.GOOGLE_CLIENT_ID:
     raise Exception("Google OAuth não configurado")
 
 google_bp = make_google_blueprint(
-    client_id=GOOGLE_CLIENT_ID,
-    client_secret=GOOGLE_CLIENT_SECRET,
-    redirect_to="pos_login",
+    client_id=Config.GOOGLE_CLIENT_ID,
+    client_secret=Config.GOOGLE_CLIENT_SECRET,
+    redirect_to="auth_google_callback",
     scope=["profile", "email"]
 )
 
-app.register_blueprint(google_bp, url_prefix="/login")
+app.register_blueprint(google_bp, url_prefix="/auth/google")
 
-# -----------------------------
-# SEGURANÇA EXECUTOR
-# -----------------------------
-MAX_CODE_SIZE = 5000
-BLOCKED = ["import os", "import sys", "open(", "exec(", "__"]
+# =============================
+# HELPERS
+# =============================
+def login_required(f):
+    @wraps(f)
+    def wrapper(*args, **kwargs):
+        if not session.get("user"):
+            return jsonify({"error": "Não autenticado"}), 401
+        return f(*args, **kwargs)
+    return wrapper
 
-def verificar_codigo(codigo):
-    if len(codigo) > MAX_CODE_SIZE:
-        return False, "Código muito grande"
+def is_guest():
+    return session.get("guest", False)
 
-    for b in BLOCKED:
-        if b in codigo:
-            return False, f"Bloqueado: {b}"
-
-    return True, None
-
-# -----------------------------
-# LOGIN EMAIL
-# -----------------------------
-@app.route("/login/email", methods=["POST"])
-def login_email():
+# =============================
+# AUTH - EMAIL
+# =============================
+@app.route("/auth/login", methods=["POST"])
+def auth_login():
     try:
         data = request.get_json()
         email = data.get("email")
         senha = data.get("senha")
 
         if not email or not senha:
-            return jsonify({"success": False, "error": "Preencha tudo"})
+            return jsonify({"success": False, "error": "Dados inválidos"}), 400
 
         user = users.find_one({"email": email, "senha": senha})
 
-        if user:
-            session["user"] = email
-            return jsonify({"success": True})
+        if not user:
+            return jsonify({"success": False, "error": "Credenciais inválidas"}), 401
 
-        return jsonify({"success": False, "error": "Login inválido"})
+        session["user"] = email
+        session["guest"] = False
+
+        return jsonify({"success": True})
 
     except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
+        return jsonify({"success": False, "error": str(e)}), 500
 
-# -----------------------------
-# GOOGLE LOGIN FINAL
-# -----------------------------
-@app.route("/pos_login")
-def pos_login():
+# =============================
+# AUTH - GOOGLE CALLBACK
+# =============================
+@app.route("/auth/google/callback")
+def auth_google_callback():
     try:
         if not google.authorized:
             return redirect(url_for("google.login"))
@@ -106,15 +107,14 @@ def pos_login():
         resp = google.get("/oauth2/v2/userinfo")
 
         if not resp.ok:
-            return f"Erro Google: {resp.text}"
+            return "Erro Google", 500
 
         data = resp.json()
         email = data.get("email")
 
         if not email:
-            return f"Erro: email não encontrado"
+            return "Email não encontrado", 400
 
-        # 🔥 cria usuário automático
         if not users.find_one({"email": email}):
             users.insert_one({
                 "email": email,
@@ -123,106 +123,118 @@ def pos_login():
             })
 
         session["user"] = email
+        session["guest"] = False
 
         return redirect("/ide")
 
     except Exception as e:
-        return f"Erro login Google: {str(e)}"
+        return f"Erro: {str(e)}"
 
-# -----------------------------
-# SESSÃO
-# -----------------------------
-@app.route("/session")
-def session_status():
+# =============================
+# AUTH - GUEST
+# =============================
+@app.route("/auth/guest")
+def auth_guest():
+    session["user"] = f"guest_{int(time.time())}"
+    session["guest"] = True
+    return redirect("/ide")
+
+# =============================
+# SESSION
+# =============================
+@app.route("/auth/session")
+def auth_session():
     return jsonify({
         "user": session.get("user"),
-        "logged": True if session.get("user") else False
+        "guest": is_guest(),
+        "logged": bool(session.get("user"))
     })
 
-@app.route("/logout")
-def logout():
+@app.route("/auth/logout")
+def auth_logout():
     session.clear()
     return redirect("/")
 
-# -----------------------------
+# =============================
 # EXECUTOR
-# -----------------------------
-@app.route("/run", methods=["POST"])
-def run_code():
-    start = time.time()
+# =============================
+MAX_CODE_SIZE = 5000
+BLOCKED = ["import os", "import sys", "open(", "exec(", "__"]
 
+def validate_code(code):
+    if len(code) > MAX_CODE_SIZE:
+        return False, "Código muito grande"
+
+    for b in BLOCKED:
+        if b in code:
+            return False, f"Bloqueado: {b}"
+
+    return True, None
+
+@app.route("/api/run", methods=["POST"])
+@login_required
+def run_code():
     try:
         data = request.get_json()
-        codigo = data.get("code", "")
+        code = data.get("code", "")
 
-        ok, erro = verificar_codigo(codigo)
+        ok, error = validate_code(code)
         if not ok:
-            return jsonify({"success": False, "error": erro})
+            return jsonify({"success": False, "error": error})
 
-        executor = Executor(codigo)
-        output = executor.executar()
+        executor = Executor(code)
+        result = executor.executar()
 
         return jsonify({
             "success": True,
-            "result": output,
-            "time": round(time.time() - start, 4)
+            "result": result
         })
 
-    except Exception as e:
+    except Exception:
         return jsonify({
             "success": False,
-            "error": "Erro ao executar",
-            "debug": str(e)
+            "error": "Erro interno",
+            "debug": traceback.format_exc()
         })
 
-# -----------------------------
-# SALVAR CÓDIGO
-# -----------------------------
-@app.route("/save", methods=["POST"])
+# =============================
+# SAVE
+# =============================
+@app.route("/api/save", methods=["POST"])
+@login_required
 def save_code():
-    try:
-        data = request.get_json()
-        codigo = data.get("code")
+    if is_guest():
+        return jsonify({"success": False, "error": "Guest não pode salvar"}), 403
 
-        user = session.get("user")
+    data = request.get_json()
+    code = data.get("code")
 
-        if not user:
-            return jsonify({"success": False, "error": "Não logado"})
+    if not code:
+        return jsonify({"success": False, "error": "Código vazio"})
 
-        if not codigo:
-            return jsonify({"success": False, "error": "Código vazio"})
+    history.insert_one({
+        "email": session["user"],
+        "code": code,
+        "timestamp": int(time.time())
+    })
 
-        history.insert_one({
-            "email": user,
-            "codigo": codigo,
-            "timestamp": int(time.time())
-        })
+    return jsonify({"success": True})
 
-        return jsonify({"success": True})
-
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-# -----------------------------
-# HISTÓRICO
-# -----------------------------
-@app.route("/history")
+# =============================
+# HISTORY
+# =============================
+@app.route("/api/history")
+@login_required
 def get_history():
-    try:
-        user = session.get("user")
-
-        if not user:
-            return jsonify([])
-
-        dados = list(history.find({"email": user}, {"_id": 0}))
-        return jsonify(dados)
-
-    except Exception as e:
+    if is_guest():
         return jsonify([])
 
-# -----------------------------
-# FRONTEND
-# -----------------------------
+    data = list(history.find({"email": session["user"]}, {"_id": 0}))
+    return jsonify(data)
+
+# =============================
+# PAGES
+# =============================
 @app.route("/")
 def login_page():
     return render_template("login.html")
@@ -233,20 +245,20 @@ def ide_page():
         return redirect("/")
     return render_template("ide.html")
 
-# -----------------------------
-# HEALTH CHECK (IMPÉRIO 🔥)
-# -----------------------------
+# =============================
+# HEALTH CHECK
+# =============================
 @app.route("/health")
 def health():
     return jsonify({
-        "status": "online",
+        "status": "ok",
         "time": int(time.time())
     })
 
-# -----------------------------
+# =============================
 # START
-# -----------------------------
+# =============================
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 80))
-    print(f"🚀 LogicStart Empire rodando na porta {port}")
+    print(f"🚀 LogicStart Microsoft rodando na porta {port}")
     app.run(host="0.0.0.0", port=port)
