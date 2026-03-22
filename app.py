@@ -118,23 +118,34 @@ def login():
 # =========================
 @app.route("/google_callback")
 def google_callback():
-    if not google.authorized:
-        return redirect(url_for("google.login"))
+    try:
+        if not google.authorized:
+            return redirect(url_for("google.login"))
 
-    resp = google.get("/oauth2/v2/userinfo")
+        resp = google.get("/oauth2/v2/userinfo")
 
-    if not resp.ok:
-        return "Erro Google"
+        print("STATUS:", resp.status_code)
+        print("RESPOSTA:", resp.text)
 
-    email = resp.json()["email"]
+        if not resp.ok:
+            return f"Erro Google: {resp.text}"
 
-    if not users.find_one({"email": email}):
-        users.insert_one({"email": email, "google": True})
+        data = resp.json()
+        email = data.get("email")
 
-    session["user"] = email
-    session["guest"] = False
+        if not email:
+            return f"Erro: email não encontrado -> {data}"
 
-    return redirect("/ide")
+        if not users.find_one({"email": email}):
+            users.insert_one({"email": email, "google": True})
+
+        session["user"] = email
+        session["guest"] = False
+
+        return redirect("/ide")
+
+    except Exception as e:
+        return f"Erro real: {str(e)}"
 
 # =========================
 # GUEST
