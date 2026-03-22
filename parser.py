@@ -1,78 +1,88 @@
 # parser.py
-from lexer import Token
 
-class Node:
-    def __init__(self, tipo, valor=None, filhos=None):
-        self.tipo = tipo
-        self.valor = valor
-        self.filhos = filhos or []
+import re
+from nodes import Mostrar, Guardar, Repetir, Condicao, Funcao, Retorna
+from errors import LogicStartErro
 
 class Parser:
-    def __init__(self, tokens):
-        self.tokens = tokens
+    def __init__(self, codigo: str):
+        self.codigo = codigo.splitlines()
         self.pos = 0
 
     def parse(self):
+        """
+        Converte o código em uma lista de nodes.
+        """
         nodes = []
-        while self.pos < len(self.tokens):
-            nodes.append(self._declaracao())
+        while self.pos < len(self.codigo):
+            linha = self.codigo[self.pos].strip()
+            if not linha or linha.startswith("//"):
+                self.pos += 1
+                continue
+
+            node = self.parse_linha(linha)
+            if node:
+                nodes.append(node)
+            self.pos += 1
         return nodes
 
-    def _declaracao(self):
-        token = self.tokens[self.pos]
-        if token.tipo in ("VAR", "CONST"):
-            return self._var_const()
-        elif token.tipo == "IMPRIMIR":
-            return self._imprimir()
-        elif token.tipo == "IF":
-            return self._if()
-        elif token.tipo == "WHILE":
-            return self._while()
-        else:
-            return self._expressao()
+    def parse_linha(self, linha):
+        # Guardar variável: variavel x = 10
+        match_var = re.match(r'^variavel\s+(\w+)\s*=\s*(.+)$', linha)
+        if match_var:
+            nome, valor = match_var.groups()
+            return Guardar(nome, valor)
 
-    def _var_const(self):
-        tipo = self.tokens[self.pos].tipo.lower()
-        self.pos += 1
-        nome = self.tokens[self.pos].valor
-        self.pos += 1
-        valor = None
-        if self.tokens[self.pos].tipo == "ASSIGN":
+        # Mostrar: mostrar("texto")
+        match_mostrar = re.match(r'^mostrar\((.+)\)$', linha)
+        if match_mostrar:
+            valor = match_mostrar.group(1)
+            return Mostrar(valor)
+
+        # Loop: repetir 5
+        match_loop = re.match(r'^repetir\s+(\d+)$', linha)
+        if match_loop:
+            vezes = int(match_loop.group(1))
             self.pos += 1
-            valor = self._expressao()
-        if self.tokens[self.pos].tipo == "SEMI":
+            bloco = self.parse_bloco("fim repetir")
+            return Repetir(vezes, bloco)
+
+        # Condicional: se x > 5
+        match_se = re.match(r'^se\s+(.+)$', linha)
+        if match_se:
+            condicao = match_se.group(1)
             self.pos += 1
-        return Node("DECLARACAO", tipo, [Node("NOME", nome), valor] if valor else [Node("NOME", nome)])
+            bloco_verdadeiro = self.parse_bloco("fim se")
+            return Condicao(condicao, bloco_verdadeiro)
 
-    def _imprimir(self):
-        self.pos += 1
-        if self.tokens[self.pos].tipo != "LPAREN":
-            raise RuntimeError("Esperado '(' após imprimir")
-        self.pos += 1
-        expr = self._expressao()
-        if self.tokens[self.pos].tipo != "RPAREN":
-            raise RuntimeError("Esperado ')' após imprimir")
-        self.pos += 1
-        if self.tokens[self.pos].tipo == "SEMI":
+        # Função: funcao nome(param1, param2)
+        match_func = re.match(r'^funcao\s+(\w+)\((.*?)\)$', linha)
+        if match_func:
+            nome, params = match_func.groups()
+            parametros = [p.strip() for p in params.split(",") if p.strip()]
             self.pos += 1
-        return Node("IMPRIMIR", filhos=[expr])
+            bloco = self.parse_bloco("fim funcao")
+            return Funcao(nome, parametros, bloco)
 
-    def _expressao(self):
-        token = self.tokens[self.pos]
-        self.pos += 1
-        if token.tipo == "NUM":
-            return Node("VALOR", float(token.valor))
-        elif token.tipo == "STRING":
-            return Node("VALOR", token.valor.strip('"'))
-        elif token.tipo == "ID":
-            return Node("NOME", token.valor)
-        else:
-            return Node("VALOR", token.valor)  # fallback simples
+        # Retorna: retorna x
+        match_retorna = re.match(r'^retorna\s+(.+)$', linha)
+        if match_retorna:
+            valor = match_retorna.group(1)
+            return Retorna(valor)
 
-    def _if(self):
-        # Implementar condicional profissional
-        pass
+        raise LogicStartErro(f"Comando desconhecido: '{linha}'")
 
-    def _while(self):
-        # Implementar loop enquanto profissional
-        pass
+    def parse_bloco(self, fim_comando):
+        """
+        Captura todas as linhas até o comando de término (fim repetir, fim se, fim funcao)
+        """
+        bloco = []
+        while self.pos < len(self.codigo):
+            linha = self.codigo[self.pos].strip()
+            if linha.lower() == fim_comando:
+                return bloco
+            node = self.parse_linha(linha)
+            if node:
+                bloco.append(node)
+            self.pos += 1
+        raise LogicStartErro(f"Bloco não fechado. Esperado: '{fim_comando}'")
