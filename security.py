@@ -1,15 +1,17 @@
-# security_pro_max.py
+# security.py - Executor de segurança LogicStart Pro Max
 
 import re
 import time
+from errors import LogicStartErro
 
 # =========================
-# CONFIGURAÇÃO PRO MAX
+# CONFIGURAÇÃO
 # =========================
-MAX_LOOP = 500            # Limite seguro de loops por função
-MAX_CODE_SIZE = 5000      # Limite de caracteres do código
-MAX_LINES = 300           # Limite de linhas
-MAX_EXECUTION_TIME = 3.0  # Tempo máximo de execução em segundos
+MAX_LOOP = 500
+MAX_CODE_SIZE = 5000
+MAX_LINES = 300
+MAX_EXECUTION_TIME = 3.0
+
 FORBIDDEN_PATTERNS = [
     r"import\s+os",
     r"import\s+sys",
@@ -27,51 +29,53 @@ FORBIDDEN_NAMES = [
 ]
 
 # =========================
-# CLASSE DE SEGURANÇA PRO MAX
+# CLASSE DE SEGURANÇA
 # =========================
-class SecurityProMax:
+class Security:
     """
-    Classe de segurança Pro Max para o IDE LogicStart.
+    Classe de segurança LogicStart.
     Valida código antes e durante a execução.
     """
 
-    def __init__(self, max_loop=MAX_LOOP, max_size=MAX_CODE_SIZE, max_lines=MAX_LINES, max_time=MAX_EXECUTION_TIME):
-        self.max_loop = max_loop
-        self.max_size = max_size
-        self.max_lines = max_lines
-        self.max_time = max_time
+    def __init__(self):
+        self.max_loop = MAX_LOOP
+        self.max_size = MAX_CODE_SIZE
+        self.max_lines = MAX_LINES
+        self.max_time = MAX_EXECUTION_TIME
         self.forbidden_patterns = FORBIDDEN_PATTERNS
         self.forbidden_names = FORBIDDEN_NAMES
 
     # -------------------------
     # VERIFICAÇÃO ESTÁTICA
     # -------------------------
-    def verificar_codigo(self, codigo: str) -> bool:
+    def verificar(self, codigo: str):
         """
         Verifica o código antes de executar.
+        Levanta LogicStartErro se detectar problema.
         """
         if not codigo or codigo.strip() == "":
-            raise ValueError("Código vazio não permitido.")
+            raise LogicStartErro("Código vazio não permitido.")
 
         if len(codigo) > self.max_size:
-            raise ValueError(f"Código muito grande ({len(codigo)}/{self.max_size}).")
+            raise LogicStartErro(f"Código muito grande ({len(codigo)}/{self.max_size}).")
 
         linhas = codigo.splitlines()
         if len(linhas) > self.max_lines:
-            raise ValueError(f"Código com muitas linhas ({len(linhas)}/{self.max_lines}).")
+            raise LogicStartErro(f"Código com muitas linhas ({len(linhas)}/{self.max_lines}).")
 
         # Detecta padrões perigosos
         for pattern in self.forbidden_patterns:
             if re.search(pattern, codigo, re.IGNORECASE):
-                raise ValueError(f"Código contém padrão proibido: '{pattern}'")
+                raise LogicStartErro(f"Código contém padrão proibido: '{pattern}'")
 
-        # Verifica loops grandes
+        # Conta loops
         loop_count = sum(1 for l in linhas if re.match(r"(?:\s*)repetir\s+\d+", l))
         if loop_count > self.max_loop:
-            raise ValueError(f"Número de loops excede limite seguro ({loop_count}/{self.max_loop}).")
+            raise LogicStartErro(f"Número de loops excede limite seguro ({loop_count}/{self.max_loop}).")
 
         # Valida nomes de variáveis/funções
         self.validar_nomes(codigo)
+
         return True
 
     # -------------------------
@@ -81,7 +85,7 @@ class SecurityProMax:
         tokens = re.findall(r"\b([a-zA-Z_][a-zA-Z0-9_]*)\b", codigo)
         for token in tokens:
             if token.lower() in self.forbidden_names:
-                raise ValueError(f"Nome de variável ou função proibido: '{token}'")
+                raise LogicStartErro(f"Nome de variável ou função proibido: '{token}'")
         return True
 
     # -------------------------
@@ -89,37 +93,38 @@ class SecurityProMax:
     # -------------------------
     def executar_seguro(self, func_exec):
         """
-        Executa função segura com timeout e bloqueio de loops infinitos.
-        `func_exec` é a função que executa o código do usuário.
+        Executa função segura com timeout.
         """
         start = time.time()
         try:
             resultado = func_exec()
             if (time.time() - start) > self.max_time:
-                raise TimeoutError(f"Tempo máximo de execução excedido ({self.max_time}s).")
+                raise LogicStartErro(f"Tempo máximo de execução excedido ({self.max_time}s).")
             return resultado
         except Exception as e:
-            raise RuntimeError(f"Erro durante execução segura: {e}")
+            raise LogicStartErro(f"Erro durante execução segura: {e}")
+
 
 # =========================
-# TESTE RÁPIDO PRO MAX
+# TESTE RÁPIDO
 # =========================
 if __name__ == "__main__":
     codigo_teste = """
     variavel x = 10
     repetir 5:
-        imprimir(x)
+        mostrar(x)
     """
 
-    sec = SecurityProMax()
+    sec = Security()
     try:
-        if sec.verificar_codigo(codigo_teste):
+        if sec.verificar(codigo_teste):
             print("Código seguro ✅")
-            
+
             # Simulando execução segura
             def func():
                 for i in range(5):
                     print(i)
+
             sec.executar_seguro(func)
     except Exception as e:
         print(f"Erro de segurança: {e}")
