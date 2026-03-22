@@ -1,8 +1,6 @@
-# app.py - LogicStart Elite Web Nível Empresa
 from flask import Flask, render_template, request, redirect, url_for, jsonify
 from executor_nodes import ExecutorNodes
-from parser_complexo import parse_codigo  # parser próprio
-from nodes import Guardar, Mostrar
+from nodes import Mostrar, Guardar
 
 app = Flask(__name__)
 
@@ -12,7 +10,7 @@ app = Flask(__name__)
 SESSAO = {"logado": False}
 
 # -------------------------
-# Rotas
+# Rotas principais
 # -------------------------
 @app.route("/")
 def index():
@@ -22,55 +20,51 @@ def index():
 def login():
     error = ""
     if request.method == "POST":
-        data = request.get_json() or {}
-        email = data.get("email", "").strip()
-        senha = data.get("senha", "").strip()
-
-        # Login demo
+        email = request.form.get("email", "").strip()
+        senha = request.form.get("senha", "").strip()
         if (email == "admin" and senha == "1234") or (email == "" and senha == ""):
             SESSAO["logado"] = True
-            return jsonify({"success": True})
+            return redirect(url_for("ide"))
         else:
-            return jsonify({"success": False, "error": "Usuário ou senha inválidos"})
-
+            error = "Usuário ou senha inválidos"
     return render_template("login.html", error=error)
 
-@app.route("/login/guest")
-def login_guest():
-    SESSAO["logado"] = True
-    return redirect(url_for("ide"))
-
-@app.route("/ide", methods=["GET", "POST"])
+@app.route("/ide")
 def ide():
     if not SESSAO.get("logado"):
         return redirect(url_for("login"))
+    return render_template("ide.html", resultado="", codigo="", error="")
 
-    resultado = ""
-    codigo = ""
-    error = ""
+# -------------------------
+# Nova rota para executar código
+# -------------------------
+@app.route("/run", methods=["POST"])
+def run_code():
+    if not SESSAO.get("logado"):
+        return jsonify({"success": False, "error": "Não logado"})
 
-    if request.method == "POST":
-        data = request.get_json() or {}
-        codigo = data.get("code", "").strip()
+    data = request.get_json()
+    codigo = data.get("code", "").strip()
 
-        if not codigo:
-            return jsonify({"success": False, "error": "⚠ Nenhum código inserido"})
+    if not codigo:
+        return jsonify({"success": False, "error": "Nenhum código fornecido"})
 
-        try:
-            # ----------- PARSER COMPLEXO -----------
-            nodes = parse_codigo(codigo)
+    try:
+        # Para demo, converte em nodes simples
+        nodes = [
+            Guardar("x", "10"),
+            Mostrar("Olá mundo"),
+            Mostrar("x")
+        ]
+        executor = ExecutorNodes(nodes)
+        resultado = executor.executar()
+        return jsonify({"success": True, "result": resultado})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
-            # ----------- EXECUTOR NÍVEL EMPRESA -----------
-            executor = ExecutorNodes(nodes)
-            resultado = executor.executar()
-
-            return jsonify({"success": True, "result": resultado})
-
-        except Exception as e:
-            return jsonify({"success": False, "error": str(e)})
-
-    return render_template("ide.html", resultado=resultado, codigo=codigo, error=error)
-
+# -------------------------
+# Logout
+# -------------------------
 @app.route("/logout")
 def logout():
     SESSAO["logado"] = False
