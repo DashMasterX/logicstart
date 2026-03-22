@@ -1,11 +1,7 @@
 flask
 flask-cors
-flask-dance
 flask-session
-pymongo
-requests-oauthlib
+flask-dance
 requests
-kivy
-kivymd
-rich
-prompt_toolkit
+requests-oauthlib
+pymongo
