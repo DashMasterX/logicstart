@@ -1,8 +1,11 @@
+import os
+os.environ['OAUTHLIB_INSECURE_TRANSPORT'] = '1'  # Permite OAuth mesmo sem HTTPS interno do Flask
+
 from flask import Flask, request, jsonify, render_template, redirect, url_for, session
 from flask_cors import CORS
 from flask_dance.contrib.google import make_google_blueprint, google
 from pymongo import MongoClient
-import os, time, traceback
+import time, traceback
 from executor import Executor
 
 # -----------------------------
@@ -11,7 +14,6 @@ from executor import Executor
 app = Flask(__name__)
 CORS(app)
 
-# Use SECRET_KEY fixa via variável de ambiente
 app.secret_key = os.environ.get("SECRET_KEY", "uma_chave_super_secreta")
 
 # -----------------------------
@@ -49,7 +51,6 @@ def verificar_usuario(email, senha):
 GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID")
 GOOGLE_CLIENT_SECRET = os.environ.get("GOOGLE_CLIENT_SECRET")
 
-# Força o redirect_uri correto (HTTPS do Square Cloud)
 redirect_uri = "https://logicstart.squareweb.app/login/google/authorized"
 
 blueprint = make_google_blueprint(
@@ -75,7 +76,7 @@ def login_email():
         return jsonify({"success": True})
     return jsonify({"success": False, "error": "Email ou senha incorretos"})
 
-@app.route("/login/google/redirect")
+@app.route("/login/google/authorized")
 def login_google_redirect():
     try:
         if not google.authorized:
@@ -93,9 +94,6 @@ def logout():
     session.pop('user', None)
     return jsonify({"success": True})
 
-# -----------------------------
-# SESSÃO PARA IDE
-# -----------------------------
 @app.route("/session")
 def session_status():
     return jsonify({"user": session.get("user")})
