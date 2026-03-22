@@ -1,51 +1,45 @@
 # main.py
 
-import sys
-from rich.console import Console
-from prompt_toolkit import prompt
-from security import Security
-from engine import LogicStart, LogicStartErro
+from kivy.lang import Builder
+from kivy.core.window import Window
+from kivy.uix.screenmanager import ScreenManager
+from kivymd.app import MDApp
 
-console = Console()
+from gui.screens import EditorScreen, ResultScreen
+from executor import Executor
 
-def mostrar_boas_vindas():
-    console.print("\n[bold cyan]=== LogicStart Pro Max ===[/bold cyan]")
-    console.print("[green]Python em Português - IDE Segura[/green]\n")
-    console.print("Digite 'sair' para encerrar a sessão.\n")
+# Se estiver no PC, define tamanho da janela
+Window.size = (900, 600)
+
+class LogicStartApp(MDApp):
+    def build(self):
+        self.sm = ScreenManager()
+
+        # Inicializa telas
+        self.editor_screen = EditorScreen(app=self, name="editor")
+        self.result_screen = ResultScreen(app=self, name="resultado")
+
+        self.sm.add_widget(self.editor_screen)
+        self.sm.add_widget(self.result_screen)
+
+        return self.sm
+
+    def execute_code(self, codigo):
+        """
+        Executa o código do editor e mostra no resultado.
+        """
+        try:
+            executor = Executor(codigo)
+            resultado = executor.executar()
+        except Exception as e:
+            resultado = f"❌ Erro: {e}"
+
+        self.result_screen.show_output(str(resultado))
+
 
 def main():
-    mostrar_boas_vindas()
-    seguranca = Security()
+    LogicStartApp().run()
 
-    while True:
-        try:
-            codigo = prompt("[bold yellow]LogicStart > [/bold yellow]\n", multiline=True)
-            if codigo.strip().lower() == "sair":
-                console.print("[red]Saindo...[/red]")
-                break
-
-            # Segurança: verifica código antes de executar
-            try:
-                seguranca.verificar(codigo)
-            except ValueError as ve:
-                console.print(f"[bold red]Erro de segurança:[/bold red] {ve}")
-                continue
-
-            # Executa engine em português
-            engine = LogicStart(codigo)
-            try:
-                engine.executar()
-            except LogicStartErro as le:
-                console.print(f"[bold red]Erro na execução:[/bold red] {le}")
-
-        except KeyboardInterrupt:
-            console.print("\n[red]Sessão interrompida pelo usuário[/red]")
-            break
-        except EOFError:
-            console.print("\n[red]Sessão encerrada[/red]")
-            break
-        except Exception as e:
-            console.print(f"[bold red]Erro inesperado:[/bold red] {e}")
 
 if __name__ == "__main__":
     main()
