@@ -3,13 +3,15 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite - Login</title>
+<title>LogicStart Empire</title>
 
 <style>
+* { box-sizing: border-box; }
+
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
+    background: radial-gradient(circle at top, #1a1a1a, #0d0d0d);
     color: #e0e0e0;
     display: flex;
     justify-content: center;
@@ -17,23 +19,28 @@ body {
     height: 100vh;
 }
 
+/* CONTAINER */
 .login-box {
-    background: #202020;
-    padding: 40px;
-    border-radius: 16px;
-    width: 340px;
+    background: rgba(25,25,25,0.95);
+    backdrop-filter: blur(10px);
+    padding: 45px;
+    border-radius: 18px;
+    width: 360px;
     text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    animation: fadeIn 0.6s ease;
+    box-shadow: 0 15px 40px rgba(0,0,0,0.7);
+    animation: fade 0.5s ease;
 }
 
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
+@keyframes fade {
+    from {opacity:0; transform:translateY(15px);}
+    to {opacity:1; transform:translateY(0);}
 }
 
-h2 {
-    margin-bottom: 10px;
+/* TITLES */
+h1 {
+    margin: 0;
+    font-size: 26px;
+    font-weight: 600;
 }
 
 .subtitle {
@@ -42,76 +49,88 @@ h2 {
     margin-bottom: 25px;
 }
 
-.input-field {
+/* INPUT */
+.input {
     width: 100%;
-    padding: 12px;
-    margin: 8px 0;
-    border-radius: 8px;
-    border: 1px solid #444;
+    padding: 13px;
+    margin: 10px 0;
+    border-radius: 10px;
+    border: 1px solid #333;
     background: #121212;
     color: #fff;
     font-size: 15px;
-}
-
-.input-field:focus {
-    outline: none;
-    border-color: #3a78d7;
-}
-
-.btn {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    margin-top: 10px;
     transition: 0.2s;
 }
 
-.btn-primary {
-    background: #3a78d7;
+.input:focus {
+    outline: none;
+    border-color: #3a78d7;
+    box-shadow: 0 0 8px rgba(58,120,215,0.4);
+}
+
+/* BUTTONS */
+.btn {
+    width: 100%;
+    padding: 13px;
+    border: none;
+    border-radius: 10px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 12px;
+    transition: 0.2s;
+}
+
+.btn-main {
+    background: linear-gradient(135deg, #3a78d7, #2b5ea0);
     color: white;
 }
 
-.btn-primary:hover {
-    background: #2b5ea0;
+.btn-main:hover {
+    transform: scale(1.02);
 }
 
+/* GOOGLE */
 .btn-google {
     background: white;
     color: black;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 10px;
+    font-weight: 500;
 }
 
 .btn-google:hover {
     background: #ddd;
 }
 
+/* GUEST */
 .btn-guest {
     background: transparent;
+    border: 1px solid #333;
     color: #aaa;
-    border: 1px solid #444;
 }
 
 .btn-guest:hover {
-    background: #2a2a2a;
+    background: #1f1f1f;
 }
 
-.loader {
-    display: none;
-    margin-top: 10px;
+/* STATUS */
+.status {
+    margin-top: 12px;
     font-size: 13px;
-    color: #aaa;
+    min-height: 18px;
 }
 
-.error {
-    margin-top: 10px;
-    color: #ff5555;
-    font-size: 13px;
+.error { color: #ff5555; }
+.success { color: #55ff88; }
+
+/* LOADING DOTS */
+.loading::after {
+    content: "...";
+    animation: dots 1s infinite;
+}
+
+@keyframes dots {
+    0% {content:".";}
+    33% {content:"..";}
+    66% {content:"...";}
 }
 </style>
 </head>
@@ -119,33 +138,31 @@ h2 {
 <body>
 
 <div class="login-box">
-    <h2>LogicStart Elite</h2>
-    <div class="subtitle">Entre para acessar seu ambiente</div>
+    <h1>LogicStart Empire</h1>
+    <div class="subtitle">Ambiente profissional de desenvolvimento</div>
 
-    <input class="input-field" type="email" id="email" placeholder="Email">
-    <input class="input-field" type="password" id="senha" placeholder="Senha">
+    <input class="input" type="email" id="email" placeholder="Email">
+    <input class="input" type="password" id="senha" placeholder="Senha">
 
-    <button class="btn btn-primary" onclick="loginEmail()">Entrar</button>
+    <button class="btn btn-main" onclick="loginEmail()">Entrar</button>
 
     <button class="btn btn-google" onclick="loginGoogle()">
-        🔵 Entrar com Google
+        Entrar com Google
     </button>
 
-    <button class="btn btn-guest" onclick="entrarSemLogin()">
+    <button class="btn btn-guest" onclick="guest()">
         Entrar sem login
     </button>
 
-    <div class="loader" id="loader">Carregando...</div>
-    <div class="error" id="error"></div>
+    <div class="status" id="status"></div>
 </div>
 
 <script>
-function setLoading(state) {
-    document.getElementById("loader").style.display = state ? "block" : "none";
-}
+const statusEl = document.getElementById("status");
 
-function setError(msg) {
-    document.getElementById("error").textContent = msg || "";
+function setStatus(msg, type="") {
+    statusEl.className = "status " + type;
+    statusEl.textContent = msg;
 }
 
 function loginEmail() {
@@ -153,12 +170,11 @@ function loginEmail() {
     const senha = document.getElementById("senha").value;
 
     if(!email || !senha) {
-        setError("Preencha todos os campos.");
+        setStatus("Preencha todos os campos", "error");
         return;
     }
 
-    setError("");
-    setLoading(true);
+    setStatus("Conectando", "loading");
 
     fetch("/login/email", {
         method: "POST",
@@ -167,16 +183,15 @@ function loginEmail() {
     })
     .then(res => res.json())
     .then(data => {
-        setLoading(false);
-        if(data.success) {
-            window.location.href = "/ide";
+        if(data.success){
+            setStatus("Login realizado", "success");
+            setTimeout(() => window.location.href="/ide", 800);
         } else {
-            setError(data.error || "Erro ao logar");
+            setStatus(data.error || "Erro no login", "error");
         }
     })
     .catch(() => {
-        setLoading(false);
-        setError("Erro ao conectar com o servidor");
+        setStatus("Erro de conexão", "error");
     });
 }
 
@@ -184,7 +199,7 @@ function loginGoogle() {
     window.location.href = "/login/google";
 }
 
-function entrarSemLogin() {
+function guest() {
     window.location.href = "/ide";
 }
 </script>
