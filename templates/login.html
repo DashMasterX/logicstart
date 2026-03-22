@@ -3,92 +3,62 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite Imperium - Login</title>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
-
+<title>LogicStart Elite Pro Max</title>
 <style>
-:root {
-    --primary: #3a78d7;
-    --secondary: #ff5555;
-    --bg-gradient: linear-gradient(135deg, #0c0c0c, #1f1f1f);
-    --input-bg: #121212;
-    --input-border: #444;
-    --text-color: #e0e0e0;
-}
-
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Inter', sans-serif; }
-
 body {
-    height: 100vh;
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
+    color: #e0e0e0;
     display: flex;
     justify-content: center;
     align-items: center;
-    background: var(--bg-gradient);
-    color: var(--text-color);
+    height: 100vh;
 }
 
-.login-container {
+.login-box {
     background: #202020;
-    padding: 50px 40px;
-    border-radius: 20px;
+    padding: 40px;
+    border-radius: 16px;
     width: 360px;
     text-align: center;
-    box-shadow: 0 15px 40px rgba(0,0,0,0.7);
-    animation: fadeIn 0.8s ease;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    animation: fadeIn 0.6s ease;
 }
 
 @keyframes fadeIn {
-    from { opacity: 0; transform: translateY(20px); }
+    from { opacity: 0; transform: translateY(10px); }
     to { opacity: 1; transform: translateY(0); }
 }
 
-h1 {
-    font-weight: 600;
-    margin-bottom: 10px;
-    font-size: 28px;
-}
-
-.subtitle {
-    color: #aaa;
-    font-size: 14px;
-    margin-bottom: 30px;
-}
+h2 { margin-bottom: 10px; }
+.subtitle { font-size: 14px; color: #aaa; margin-bottom: 25px; }
 
 .input-field {
     width: 100%;
-    padding: 14px;
-    margin: 10px 0;
-    border-radius: 10px;
-    border: 1px solid var(--input-border);
-    background: var(--input-bg);
-    color: var(--text-color);
-    font-size: 16px;
-    transition: all 0.2s;
+    padding: 12px;
+    margin: 8px 0;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #121212;
+    color: #fff;
+    font-size: 15px;
 }
-
-.input-field:focus {
-    outline: none;
-    border-color: var(--primary);
-    box-shadow: 0 0 5px var(--primary);
-}
+.input-field:focus { outline: none; border-color: #3a78d7; }
 
 .btn {
     width: 100%;
-    padding: 14px;
-    border-radius: 10px;
-    margin-top: 12px;
-    font-size: 16px;
-    font-weight: 600;
-    cursor: pointer;
+    padding: 12px;
     border: none;
-    transition: all 0.3s;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 10px;
+    transition: 0.2s;
 }
 
-.btn-primary {
-    background: var(--primary);
-    color: white;
-}
-.btn-primary:hover { background: #2b5ea0; transform: translateY(-2px); }
+.btn-primary { background: #3a78d7; color: white; }
+.btn-primary:hover { background: #2b5ea0; }
 
 .btn-google {
     background: white;
@@ -96,73 +66,47 @@ h1 {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 12px;
-    font-weight: 500;
+    gap: 10px;
 }
-.btn-google:hover { background: #ddd; transform: translateY(-2px); }
+.btn-google:hover { background: #ddd; }
 
 .btn-guest {
     background: transparent;
     color: #aaa;
     border: 1px solid #444;
 }
-.btn-guest:hover { background: #2a2a2a; transform: translateY(-2px); }
+.btn-guest:hover { background: #2a2a2a; }
 
-.loader {
-    display: none;
-    margin-top: 15px;
-    font-size: 14px;
-    color: #aaa;
-}
-
-.error {
-    margin-top: 12px;
-    color: var(--secondary);
-    font-size: 13px;
-    font-weight: 500;
-}
-
-.icon-google {
-    width: 20px;
-    height: 20px;
-}
+.loader { display: none; margin-top: 10px; font-size: 13px; color: #aaa; }
+.error { margin-top: 10px; color: #ff5555; font-size: 13px; }
 </style>
 </head>
 <body>
 
-<div class="login-container">
-    <h1>LogicStart Elite</h1>
-    <div class="subtitle">Bem-vindo ao Imperium IDE</div>
+<div class="login-box">
+    <h2>LogicStart Elite Pro Max</h2>
+    <div class="subtitle">Acesse seu ambiente Apple Pro Max Supreme</div>
 
-    <input type="email" id="email" placeholder="Email" class="input-field">
-    <input type="password" id="senha" placeholder="Senha" class="input-field">
+    <input class="input-field" type="email" id="email" placeholder="Email">
+    <input class="input-field" type="password" id="senha" placeholder="Senha">
 
     <button class="btn btn-primary" onclick="loginEmail()">Entrar</button>
-
-    <button class="btn btn-google" onclick="loginGoogle()">
-        <img class="icon-google" src="https://upload.wikimedia.org/wikipedia/commons/5/53/Google_%22G%22_Logo.svg" alt="Google Logo">
-        Entrar com Google
-    </button>
-
-    <button class="btn btn-guest" onclick="entrarSemLogin()">Entrar como Convidado</button>
+    <button class="btn btn-google" onclick="loginGoogle()">🔵 Entrar com Google</button>
+    <button class="btn btn-guest" onclick="entrarSemLogin()">Entrar como Guest</button>
 
     <div class="loader" id="loader">Carregando...</div>
     <div class="error" id="error"></div>
 </div>
 
 <script>
-function setLoading(state) {
-    document.getElementById("loader").style.display = state ? "block" : "none";
-}
-
-function setError(msg) {
-    document.getElementById("error").textContent = msg || "";
-}
+function setLoading(state) { document.getElementById("loader").style.display = state ? "block" : "none"; }
+function setError(msg) { document.getElementById("error").textContent = msg || ""; }
 
 function loginEmail() {
     const email = document.getElementById("email").value;
     const senha = document.getElementById("senha").value;
-    if(!email || !senha) { setError("Preencha todos os campos."); return; }
+
+    if(!email || !senha){ setError("Preencha todos os campos."); return; }
 
     setError(""); setLoading(true);
 
@@ -174,21 +118,14 @@ function loginEmail() {
     .then(res => res.json())
     .then(data => {
         setLoading(false);
-        if(data.success) window.location.href = "/ide";
-        else setError(data.error || "Erro ao logar");
+        if(data.success){ window.location.href = "/ide"; }
+        else{ setError(data.error || "Erro ao logar"); }
     })
-    .catch(() => { setLoading(false); setError("Erro ao conectar com o servidor"); });
+    .catch(()=>{ setLoading(false); setError("Erro ao conectar com o servidor"); });
 }
 
-function loginGoogle() {
-    window.location.href = "/login/google";
-}
-
-function entrarSemLogin() {
-    fetch("/guest")
-    .then(() => window.location.href = "/ide")
-    .catch(() => setError("Erro ao entrar como convidado"));
-}
+function loginGoogle() { window.location.href = "/login/google"; }
+function entrarSemLogin() { window.location.href = "/login/guest"; }
 </script>
 
 </body>
