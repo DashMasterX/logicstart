@@ -1,7 +1,7 @@
 flask
 flask-cors
-flask-session
-flask-dance
-requests
-requests-oauthlib
-pymongo
+flask-dance        # Para login via Google
+flask-session       # Sessões seguras
+pymongo             # MongoDB
+requests-oauthlib   # OAuth
+requests            # Chamadas HTTP
