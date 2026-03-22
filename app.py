@@ -1,79 +1,84 @@
-# app.py | LogicStart Elite - Nível Empresa Apple Pro Max / Microsoft Justos
-
-from flask import Flask, render_template, request, redirect, url_for, session, flash
-from executor import Executor
+# app.py - LogicStart Elite Pro Max Web
+from flask import Flask, render_template, request, redirect, url_for
+from executor_nodes import ExecutorNodes
 from security_pro_max import SecurityProMax
 from nodes import Mostrar, Guardar
-import os
 
-# =============================
-# CONFIGURAÇÃO
-# =============================
 app = Flask(__name__)
-app.secret_key = os.urandom(24)  # Sessões seguras
 
+# =========================
 # Segurança Pro Max
+# =========================
 security = SecurityProMax()
 
-# =============================
-# PÁGINAS PRINCIPAIS
-# =============================
+# =========================
+# Usuário logado (simples, para demo)
+# =========================
+SESSAO = {"logado": False}
+
+# =========================
+# Rotas
+# =========================
 @app.route("/")
 def index():
-    return render_template("index.html")
+    return redirect(url_for("login"))
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
+    error = ""
     if request.method == "POST":
-        email = request.form.get("email")
-        senha = request.form.get("senha")
-        if email and senha:
-            session["user"] = email
+        email = request.form.get("email", "").strip()
+        senha = request.form.get("senha", "").strip()
+        if email == "admin" and senha == "1234":
+            SESSAO["logado"] = True
+            return redirect(url_for("ide"))
+        elif email == "" and senha == "":
+            # Guest login
+            SESSAO["logado"] = True
             return redirect(url_for("ide"))
         else:
-            flash("Preencha todos os campos", "error")
-    return render_template("login.html")
+            error = "Usuário ou senha inválidos"
+    return render_template("login.html", error=error)
 
 @app.route("/ide", methods=["GET", "POST"])
 def ide():
-    if "user" not in session:
+    if not SESSAO.get("logado"):
         return redirect(url_for("login"))
 
     resultado = ""
     codigo = ""
+    error = ""
+
     if request.method == "POST":
         codigo = request.form.get("codigo", "").strip()
         if not codigo:
-            resultado = "⚠ Nenhum código inserido"
+            error = "⚠ Nenhum código inserido"
         else:
             try:
-                # Verifica código com segurança
+                # Verifica segurança Pro Max
                 security.verificar_codigo(codigo)
 
-                # Converte código simples em nodes de teste (exemplo)
+                # Para demo: converte em nodes simples
+                # Aqui você pode substituir pelo seu parser real
                 nodes = [
-                    Mostrar("Olá mundo"),
                     Guardar("x", "10"),
+                    Mostrar("Olá mundo"),
                     Mostrar("x")
                 ]
-
-                # Executa nodes
-                executor = Executor(nodes)
+                executor = ExecutorNodes(nodes)
                 resultado = executor.executar()
-
             except Exception as e:
-                resultado = f"❌ Erro: {e}"
+                resultado = f"Erro: {e}"
 
-    return render_template("ide.html", resultado=resultado, codigo=codigo)
+    return render_template("ide.html", resultado=resultado, codigo=codigo, error=error)
 
 @app.route("/logout")
 def logout():
-    session.clear()
+    SESSAO["logado"] = False
     return redirect(url_for("login"))
 
-# =============================
-# RODANDO O APP
-# =============================
+# =========================
+# Rodar app na Square Cloud porta 80
+# =========================
 if __name__ == "__main__":
-    # Porta 80 para Square Cloud
     app.run(host="0.0.0.0", port=80)
