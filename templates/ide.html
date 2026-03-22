@@ -3,219 +3,172 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart IDE - Pydroid Style</title>
-
-<!-- CodeMirror CDN -->
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.css">
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/codemirror.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.65.15/mode/python/python.min.js"></script>
-
+<title>LogicStart IDE Pro Max</title>
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
+<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css" rel="stylesheet">
 <style>
 body {
     margin: 0;
     font-family: 'Segoe UI', sans-serif;
-    background: #1e1e1e;
-    color: #d4d4d4;
+    background: #282a36;
+    color: #f8f8f2;
+    height: 100vh;
     display: flex;
     flex-direction: column;
-    height: 100vh;
 }
 
 header {
-    background: #2b2b2b;
-    padding: 10px;
+    background: #44475a;
+    padding: 12px 20px;
+    font-size: 1.5em;
     display: flex;
-    flex-wrap: wrap;
     justify-content: space-between;
     align-items: center;
 }
 
-header h1 {
-    font-size: 18px;
-    margin: 0;
-    color: #569CD6;
+header button {
+    background: #6272a4;
+    border: none;
+    color: white;
+    padding: 6px 12px;
+    margin-left: 8px;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: 0.2s;
+}
+
+header button:hover {
+    background: #50577a;
+}
+
+.main-container {
+    flex: 1;
+    display: flex;
+    flex-direction: row;
+    overflow: hidden;
+}
+
+#editor-container {
+    flex: 2;
+    display: flex;
+    flex-direction: column;
+}
+
+#editor {
+    flex: 1;
+    height: 100%;
+}
+
+#output-container {
+    flex: 1;
+    background: #1e1e2f;
+    padding: 10px;
+    overflow-y: auto;
+    font-family: monospace;
+    font-size: 14px;
 }
 
 .menu {
     display: flex;
-    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 5px;
 }
-
 .menu button {
-    background: #3a3a3a;
+    background: #6272a4;
     border: none;
-    color: #d4d4d4;
-    padding: 6px 10px;
-    margin: 3px;
+    color: white;
+    padding: 5px 10px;
     border-radius: 4px;
     cursor: pointer;
-    transition: 0.2s;
-    font-size: 13px;
 }
-
 .menu button:hover {
-    background: #505050;
-}
-
-.container {
-    display: flex;
-    flex: 1;
-    overflow: hidden;
-    flex-direction: row;
-}
-
-#editor {
-    flex: 2;
-    height: 100%;
-}
-
-.CodeMirror {
-    height: 100%;
-    font-family: monospace;
-    font-size: 14px;
-    background: #1e1e1e;
-    color: #d4d4d4;
-}
-
-.cm-keyword { color: #569CD6; }
-.cm-string { color: #D69D85; }
-.cm-comment { color: #6A9955; }
-.cm-number { color: #B5CEA8; }
-.cm-def { color: #DCDCAA; }
-
-.sidebar {
-    flex: 1;
-    background: #252525;
-    padding: 10px;
-    display: flex;
-    flex-direction: column;
-    overflow-y: auto;
-}
-
-.sidebar h2 {
-    margin-top: 0;
-    color: #569CD6;
-    font-size: 16px;
-}
-
-.output {
-    background: #111;
-    color: #d4d4d4;
-    flex: 1;
-    margin-top: 10px;
-    padding: 10px;
-    border-radius: 5px;
-    font-family: monospace;
-    font-size: 13px;
-    white-space: pre-wrap;
-    overflow-y: auto;
-}
-
-/* Responsividade celular */
-@media(max-width: 768px){
-    .container {
-        flex-direction: column;
-    }
-    #editor {
-        flex: none;
-        height: 50vh;
-    }
-    .sidebar {
-        flex: none;
-        height: 50vh;
-    }
-    .menu button {
-        font-size: 12px;
-        padding: 5px 8px;
-    }
+    background: #50577a;
 }
 </style>
 </head>
 <body>
 
 <header>
-    <h1>LogicStart IDE</h1>
-    <div class="menu">
-        <button onclick="novo()">Novo</button>
-        <button onclick="abrir()">Abrir</button>
-        <button onclick="salvar()">Salvar</button>
-        <button onclick="executar()">Executar</button>
-        <button onclick="mostrarHistorico()">Histórico</button>
-        <button onclick="toggleTema()">Tema</button>
+    <div>LogicStart IDE Pro Max</div>
+    <div>
+        <button onclick="executarCodigo()">Executar ▶</button>
+        <button onclick="salvarCodigo()">Salvar 💾</button>
+        <button onclick="limparSaida()">Limpar Saída 🗑</button>
     </div>
 </header>
 
-<div class="container">
-    <textarea id="editor"></textarea>
-    <div class="sidebar">
-        <h2>Saída</h2>
-        <div class="output" id="saida"></div>
+<div class="main-container">
+    <div id="editor-container">
+        <div class="menu">
+            <button onclick="inserirComando('variavel x = 0')">Variável</button>
+            <button onclick="inserirComando('imprimir()')">Imprimir</button>
+            <button onclick="inserirComando('se x > 0:')">Se</button>
+            <button onclick="inserirComando('retorna')">Retorna</button>
+        </div>
+        <textarea id="editor"></textarea>
     </div>
+    <div id="output-container"></div>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
 <script>
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-    mode: "python",
+    mode: {name: "python", version: 3, singleLineStringErrors: false},
+    theme: "dracula",
     lineNumbers: true,
-    theme: "default",
     indentUnit: 4,
     tabSize: 4,
-    indentWithTabs: true,
+    lineWrapping: true,
 });
 
-function novo() {
-    if(confirm("Deseja limpar o editor?")) editor.setValue("");
+function inserirComando(texto) {
+    let doc = editor.getDoc();
+    let cursor = doc.getCursor();
+    doc.replaceRange(texto, cursor);
+    editor.focus();
 }
 
-function abrir() {
-    alert("Função Abrir: implemente upload de arquivos .py aqui.");
-}
+function executarCodigo() {
+    let codigo = editor.getValue();
+    let output = document.getElementById("output-container");
+    output.innerHTML += "<div style='color:#50fa7b'>> Executando...</div>";
 
-function salvar() {
-    const codigo = editor.getValue();
-    fetch("/save", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({code: codigo})
-    }).then(res=>res.json())
-    .then(data=>{
-        alert(data.success ? "Código salvo!" : data.error);
-    });
-}
-
-function executar() {
-    const codigo = editor.getValue();
     fetch("/run", {
         method: "POST",
         headers: {"Content-Type": "application/json"},
         body: JSON.stringify({code: codigo})
-    }).then(res=>res.json())
-    .then(data=>{
-        document.getElementById("saida").textContent = data.success ? data.result : data.error;
+    })
+    .then(res => res.json())
+    .then(data => {
+        if(data.success){
+            output.innerHTML += "<div>" + data.result.replace(/\n/g,"<br>") + "</div>";
+        } else {
+            output.innerHTML += "<div style='color:#ff5555'>Erro: " + data.error + "</div>";
+        }
+        output.scrollTop = output.scrollHeight;
+    })
+    .catch(err => {
+        output.innerHTML += "<div style='color:#ff5555'>Erro conexão servidor</div>";
+        output.scrollTop = output.scrollHeight;
     });
 }
 
-function mostrarHistorico() {
-    fetch("/history").then(res=>res.json())
-    .then(data=>{
-        let out = data.map(d => d.codigo).join("\n\n---\n\n");
-        document.getElementById("saida").textContent = out || "Sem histórico";
+function salvarCodigo() {
+    let codigo = editor.getValue();
+    fetch("/save", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({code: codigo})
+    })
+    .then(res => res.json())
+    .then(data => {
+        alert(data.success ? "Código salvo!" : data.error);
     });
 }
 
-function toggleTema() {
-    const body = document.body;
-    if(body.style.background === "rgb(30, 30, 30)") {
-        body.style.background = "#f5f5f5";
-        editor.getWrapperElement().style.background = "#fff";
-        editor.getWrapperElement().style.color = "#000";
-        editor.setOption("theme", "default");
-    } else {
-        body.style.background = "#1e1e1e";
-        editor.getWrapperElement().style.background = "#1e1e1e";
-        editor.getWrapperElement().style.color = "#d4d4d4";
-        editor.setOption("theme", "default");
-    }
+function limparSaida() {
+    document.getElementById("output-container").innerHTML = "";
 }
 </script>
 
