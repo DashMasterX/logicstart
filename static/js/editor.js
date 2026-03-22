@@ -1,8 +1,8 @@
-// static/js/editor.js
+// static/js/editor.js - IDE avançado LogicStart Elite Pro Max
 
 // ===== Inicializa CodeMirror =====
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-    mode: {name: "python", version: 3, singleLineStringErrors: false},
+    mode: {name:"python", version:3, singleLineStringErrors:false},
     theme: "dracula",
     lineNumbers: true,
     lineWrapping: true,
@@ -18,19 +18,6 @@ let arquivos = {
 
 // ===== Controle de abas =====
 let arquivoAtivo = "main";
-function abrirArquivo(nome) {
-    if (!arquivos[nome]) {
-        logTerminal(`Arquivo '${nome}' não existe`, "error");
-        return;
-    }
-    arquivoAtivo = nome;
-    editor.setValue(arquivos[nome]);
-    atualizarAbas();
-}
-
-function abrirAba(nome) {
-    abrirArquivo(nome);
-}
 
 function atualizarAbas() {
     const tabBar = document.getElementById("tab-bar");
@@ -40,26 +27,48 @@ function atualizarAbas() {
         div.textContent = nome + ".ls";
         div.className = (nome === arquivoAtivo) ? "tab active" : "tab";
         div.onclick = () => abrirArquivo(nome);
+        div.draggable = true;
+        div.ondragstart = (e) => e.dataTransfer.setData("text", nome);
+        div.ondragover = (e) => e.preventDefault();
+        div.ondrop = (e) => {
+            const arr = Object.keys(arquivos);
+            const arrCopy = [...arr];
+            const from = e.dataTransfer.getData("text");
+            const to = nome;
+            if (from !== to) {
+                arrCopy.splice(arrCopy.indexOf(from),1);
+                arrCopy.splice(arrCopy.indexOf(to),0,from);
+                let novosArquivos = {};
+                arrCopy.forEach(n => novosArquivos[n] = arquivos[n]);
+                arquivos = novosArquivos;
+                atualizarAbas();
+            }
+        };
         tabBar.appendChild(div);
     });
 }
 
-// ===== Terminal / execução =====
-let terminal = document.getElementById("terminal");
-
-function limparTerminal() {
-    terminal.innerHTML = "";
+function abrirArquivo(nome) {
+    if (!arquivos[nome]) return logTerminal(`Arquivo '${nome}' não existe`, "error");
+    arquivoAtivo = nome;
+    editor.setValue(arquivos[nome]);
+    atualizarAbas();
 }
 
-function logTerminal(texto, tipo = "info") {
+function abrirAba(nome) { abrirArquivo(nome); }
+
+// ===== Terminal =====
+let terminal = document.getElementById("terminal");
+function limparTerminal() { terminal.innerHTML = ""; }
+function logTerminal(texto, tipo="info") {
     let div = document.createElement("div");
     div.className = tipo;
-    div.innerHTML = texto.replace(/\n/g, "<br>");
+    div.innerHTML = texto.replace(/\n/g,"<br>");
     terminal.appendChild(div);
     terminal.scrollTop = terminal.scrollHeight;
 }
 
-// ===== Atualiza conteúdo do arquivo ativo =====
+// ===== Atualiza arquivo ativo =====
 function atualizarArquivoAtivo() {
     arquivos[arquivoAtivo] = editor.getValue();
 }
@@ -72,18 +81,15 @@ function executarCodigo() {
 
     fetch("/run", {
         method: "POST",
-        headers: {"Content-Type": "application/json"},
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({code: codigo})
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            logTerminal(data.result, "success");
-        } else {
-            logTerminal("Erro: " + data.error, "error");
-        }
+        if (data.success) logTerminal(data.result, "success");
+        else logTerminal("Erro: " + data.error, "error");
     })
-    .catch(() => logTerminal("Erro conexão servidor", "error"));
+    .catch(() => logTerminal("Erro conexão servidor","error"));
 }
 
 // ===== Salvar código via API =====
@@ -92,34 +98,34 @@ function salvarCodigo() {
     let codigo = arquivos[arquivoAtivo];
 
     fetch("/save", {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
         body: JSON.stringify({code: codigo})
     })
     .then(res => res.json())
     .then(data => {
-        if (data.success) {
-            logTerminal(`Arquivo '${arquivoAtivo}.ls' salvo com sucesso!`, "success");
-        } else {
-            logTerminal("Erro ao salvar: " + data.error, "error");
-        }
+        if (data.success) logTerminal(`Arquivo '${arquivoAtivo}.ls' salvo com sucesso!`, "success");
+        else logTerminal("Erro ao salvar: " + data.error, "error");
     })
-    .catch(() => logTerminal("Erro conexão servidor", "error"));
+    .catch(()=>logTerminal("Erro conexão servidor","error"));
 }
 
-// ===== Adicionar novo arquivo =====
-function novoArquivo(nome) {
-    if (!nome) {
-        logTerminal("Nome de arquivo inválido", "error");
-        return;
-    }
-    nome = nome.replace(/\W/g,"_"); // só letras, números e _
-    if (arquivos[nome]) {
-        logTerminal(`Arquivo '${nome}' já existe`, "error");
-        return;
-    }
+// ===== Criar novo arquivo =====
+function novoArquivo() {
+    let nome = prompt("Nome do novo arquivo (somente letras/números/underscores):");
+    if (!nome) return;
+    nome = nome.replace(/\W/g,"_");
+    if (arquivos[nome]) return logTerminal(`Arquivo '${nome}' já existe`, "error");
     arquivos[nome] = "// Novo arquivo\n";
     abrirArquivo(nome);
+}
+
+// ===== Remover arquivo =====
+function removerArquivo() {
+    if (arquivoAtivo === "main") return logTerminal("Não é possível remover o main", "error");
+    delete arquivos[arquivoAtivo];
+    arquivoAtivo = Object.keys(arquivos)[0];
+    abrirArquivo(arquivoAtivo);
 }
 
 // ===== Inicialização =====
