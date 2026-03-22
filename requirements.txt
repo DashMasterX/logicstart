@@ -3,3 +3,4 @@ flask-cors
 flask-dance
 pymongo
 requests-oauthlib
+flask-session
