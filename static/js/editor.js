@@ -1,4 +1,4 @@
-// static/js/editor.js - IDE avançado LogicStart Elite Pro Max
+// static/js/editor.js - LogicStart Elite Pro Max Plus
 
 // ===== Inicializa CodeMirror =====
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
@@ -8,6 +8,9 @@ let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
     lineWrapping: true,
     indentUnit: 4,
     tabSize: 4,
+    autofocus: true,
+    styleActiveLine: true,
+    matchBrackets: true
 });
 
 // ===== Arquivos simulados =====
@@ -15,41 +18,61 @@ let arquivos = {
     "main": "# Seu código LogicStart aqui\n",
     "teste": "// Código de teste\n"
 };
-
-// ===== Controle de abas =====
 let arquivoAtivo = "main";
 
+// ===== Terminal =====
+let terminal = document.getElementById("terminal");
+
+function limparTerminal() {
+    terminal.innerHTML = "";
+}
+
+function logTerminal(texto, tipo="info") {
+    let div = document.createElement("div");
+    div.className = tipo;
+    div.innerHTML = texto.replace(/\n/g, "<br>");
+    terminal.appendChild(div);
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+// ===== Abas e gerenciamento de arquivos =====
 function atualizarAbas() {
     const tabBar = document.getElementById("tab-bar");
     tabBar.innerHTML = "";
+
     Object.keys(arquivos).forEach(nome => {
         let div = document.createElement("div");
         div.textContent = nome + ".ls";
         div.className = (nome === arquivoAtivo) ? "tab active" : "tab";
+
+        // Selecionar arquivo ao clicar
         div.onclick = () => abrirArquivo(nome);
+
+        // Arrastar e soltar para reorganizar abas
         div.draggable = true;
         div.ondragstart = (e) => e.dataTransfer.setData("text", nome);
         div.ondragover = (e) => e.preventDefault();
         div.ondrop = (e) => {
-            const arr = Object.keys(arquivos);
-            const arrCopy = [...arr];
             const from = e.dataTransfer.getData("text");
             const to = nome;
             if (from !== to) {
-                arrCopy.splice(arrCopy.indexOf(from),1);
-                arrCopy.splice(arrCopy.indexOf(to),0,from);
+                let keys = Object.keys(arquivos);
+                keys.splice(keys.indexOf(from), 1);
+                keys.splice(keys.indexOf(to), 0, from);
                 let novosArquivos = {};
-                arrCopy.forEach(n => novosArquivos[n] = arquivos[n]);
+                keys.forEach(k => novosArquivos[k] = arquivos[k]);
                 arquivos = novosArquivos;
                 atualizarAbas();
             }
         };
+
         tabBar.appendChild(div);
     });
 }
 
 function abrirArquivo(nome) {
     if (!arquivos[nome]) return logTerminal(`Arquivo '${nome}' não existe`, "error");
+    atualizarArquivoAtivo();
     arquivoAtivo = nome;
     editor.setValue(arquivos[nome]);
     atualizarAbas();
@@ -57,18 +80,6 @@ function abrirArquivo(nome) {
 
 function abrirAba(nome) { abrirArquivo(nome); }
 
-// ===== Terminal =====
-let terminal = document.getElementById("terminal");
-function limparTerminal() { terminal.innerHTML = ""; }
-function logTerminal(texto, tipo="info") {
-    let div = document.createElement("div");
-    div.className = tipo;
-    div.innerHTML = texto.replace(/\n/g,"<br>");
-    terminal.appendChild(div);
-    terminal.scrollTop = terminal.scrollHeight;
-}
-
-// ===== Atualiza arquivo ativo =====
 function atualizarArquivoAtivo() {
     arquivos[arquivoAtivo] = editor.getValue();
 }
@@ -77,7 +88,8 @@ function atualizarArquivoAtivo() {
 function executarCodigo() {
     atualizarArquivoAtivo();
     let codigo = arquivos[arquivoAtivo];
-    logTerminal("> Executando...", "info");
+
+    logTerminal(`> Executando '${arquivoAtivo}.ls'...`, "info");
 
     fetch("/run", {
         method: "POST",
@@ -89,7 +101,7 @@ function executarCodigo() {
         if (data.success) logTerminal(data.result, "success");
         else logTerminal("Erro: " + data.error, "error");
     })
-    .catch(() => logTerminal("Erro conexão servidor","error"));
+    .catch(() => logTerminal("Erro de conexão com o servidor", "error"));
 }
 
 // ===== Salvar código via API =====
@@ -98,8 +110,8 @@ function salvarCodigo() {
     let codigo = arquivos[arquivoAtivo];
 
     fetch("/save", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
+        method: "POST",
+        headers: {"Content-Type":"application/json"},
         body: JSON.stringify({code: codigo})
     })
     .then(res => res.json())
@@ -107,7 +119,7 @@ function salvarCodigo() {
         if (data.success) logTerminal(`Arquivo '${arquivoAtivo}.ls' salvo com sucesso!`, "success");
         else logTerminal("Erro ao salvar: " + data.error, "error");
     })
-    .catch(()=>logTerminal("Erro conexão servidor","error"));
+    .catch(() => logTerminal("Erro de conexão com o servidor", "error"));
 }
 
 // ===== Criar novo arquivo =====
@@ -116,20 +128,30 @@ function novoArquivo() {
     if (!nome) return;
     nome = nome.replace(/\W/g,"_");
     if (arquivos[nome]) return logTerminal(`Arquivo '${nome}' já existe`, "error");
+
     arquivos[nome] = "// Novo arquivo\n";
     abrirArquivo(nome);
+    logTerminal(`Arquivo '${nome}.ls' criado!`, "success");
 }
 
 // ===== Remover arquivo =====
 function removerArquivo() {
-    if (arquivoAtivo === "main") return logTerminal("Não é possível remover o main", "error");
+    if (arquivoAtivo === "main") return logTerminal("Não é possível remover o arquivo main", "error");
+
+    logTerminal(`Arquivo '${arquivoAtivo}.ls' removido`, "info");
     delete arquivos[arquivoAtivo];
     arquivoAtivo = Object.keys(arquivos)[0];
     abrirArquivo(arquivoAtivo);
 }
 
+// ===== Botões flutuantes =====
+document.getElementById("run-btn").onclick = executarCodigo;
+document.getElementById("save-btn").onclick = salvarCodigo;
+document.getElementById("clear-btn").onclick = limparTerminal;
+
 // ===== Inicialização =====
 document.addEventListener("DOMContentLoaded", () => {
     atualizarAbas();
     abrirArquivo("main");
+    logTerminal("LogicStart Elite Pro Max Plus inicializado!", "info");
 });
