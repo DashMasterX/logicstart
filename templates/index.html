@@ -1,166 +1,360 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LogicStart Elite Supreme Hub</title>
-  <style>
-    :root {
-      --bg: #0f0f1a;
-      --bg2: #1a1a2e;
-      --primary: #6e6ef8;
-      --text: #f1f1f1;
-      --success: #4caf50;
-      --error: #ff5c5c;
-    }
-    body {
-      margin: 0;
-      font-family: 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      height: 100vh;
-    }
-    .container {
-      background: var(--bg2);
-      padding: 40px;
-      border-radius: 16px;
-      width: 360px;
-      text-align: center;
-      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-    }
-    h2 { margin-bottom: 10px; }
-    .input-field {
-      width: 100%;
-      padding: 12px;
-      margin: 8px 0;
-      border-radius: 8px;
-      border: 1px solid #444;
-      background: #121212;
-      color: white;
-      font-size: 15px;
-    }
-    .btn {
-      width: 100%;
-      padding: 12px;
-      border: none;
-      border-radius: 8px;
-      cursor: pointer;
-      font-size: 15px;
-      margin-top: 10px;
-      transition: 0.2s;
-    }
-    .btn-primary {
-      background: var(--primary);
-      color: white;
-    }
-    .btn-primary:hover {
-      background: #2b5ea0;
-    }
-    .btn-secondary {
-      background: #444;
-      color: white;
-    }
-    .btn-secondary:hover {
-      background: #666;
-    }
-    .error {
-      margin-top: 10px;
-      color: var(--error);
-      font-size: 13px;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LogicStart Elite IDE</title>
+
+    <!-- CodeMirror 6 -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/python/python.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
+
+    <style>
+        :root{
+            --bg:#0f0f0f; --bg2:#1a1a2e; --bg3:#23233a;
+            --primary:#6e6ef8; --text:#f1f1f1;
+            --success:#4caf50; --error:#ff5c5c; --info:#00bcd4;
+        }
+        body {
+            margin: 0;
+            font-family: 'Segoe UI';
+            background: var(--bg);
+            color: var(--text);
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+        }
+        header {
+            display: flex;
+            justify-content: space-between;
+            padding: 10px;
+            background: var(--bg2);
+            border-bottom: 2px solid var(--primary);
+        }
+        header h1 {
+            margin: 0;
+            font-size: 18px;
+        }
+        header .btn {
+            background: var(--primary);
+            border: none;
+            padding: 8px;
+            color: white;
+            border-radius: 6px;
+            cursor: pointer;
+            margin-left: 5px;
+        }
+        .main {
+            flex: 1;
+            display: flex;
+            overflow: hidden;
+        }
+        .sidebar {
+            width: 220px;
+            background: var(--bg2);
+            border-right: 2px solid var(--primary);
+            overflow-y: auto;
+            padding: 10px;
+        }
+        .file {
+            padding: 8px;
+            margin-bottom: 5px;
+            border-radius: 6px;
+            background: var(--bg3);
+            cursor: pointer;
+        }
+        .file.active {
+            background: var(--primary);
+        }
+        .editor-container {
+            flex: 2;
+            display: flex;
+            flex-direction: column;
+        }
+        .tabs {
+            display: flex;
+            background: var(--bg3);
+            overflow-x: auto;
+            border-bottom: 2px solid var(--primary);
+        }
+        .tab {
+            padding: 10px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .tab.active {
+            background: var(--primary);
+        }
+        .tab.modified::after {
+            content: " ●";
+            color: #ff9800;
+        }
+        #editor {
+            flex: 1;
+        }
+        .terminal {
+            height: 150px;
+            background: #111;
+            padding: 10px;
+            overflow: auto;
+            font-family: monospace;
+        }
+        .success {
+            color: var(--success);
+        }
+        .error {
+            color: var(--error);
+        }
+        .info {
+            color: var(--info);
+        }
+        .ai-panel {
+            width: 300px;
+            background: var(--bg2);
+            border-left: 2px solid var(--primary);
+            display: flex;
+            flex-direction: column;
+        }
+        .chat {
+            flex: 1;
+            overflow: auto;
+            padding: 10px;
+        }
+        .msg {
+            margin-bottom: 10px;
+        }
+        .user {
+            color: #8be9fd;
+        }
+        .bot {
+            color: #50fa7b;
+        }
+        textarea {
+            margin: 10px;
+            background: var(--bg3);
+            color: white;
+            border: none;
+            padding: 8px;
+            border-radius: 5px;
+            width: 90%;
+            font-family: monospace;
+        }
+        .ai-panel button {
+            margin: 5px;
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 6px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .ai-panel button:hover {
+            opacity: 0.85;
+        }
+        .status {
+            height: 25px;
+            background: var(--bg3);
+            display: flex;
+            justify-content: space-between;
+            padding: 5px;
+            font-size: 12px;
+        }
+    </style>
 </head>
 <body>
+    <header>
+        <h1>🚀 LogicStart Elite IDE</h1>
+        <div>
+            <button class="btn" onclick="novoArquivo()">📄 Novo</button>
+            <button class="btn" onclick="salvar()">💾 Salvar</button>
+            <button class="btn" onclick="executar()">▶ Executar</button>
+            <button class="btn" onclick="logout()">🔒 Logout</button>
+        </div>
+    </header>
+    <div class="main">
+        <!-- Sidebar de Arquivos -->
+        <div class="sidebar" id="files"></div>
+        <!-- Área do Editor de Código -->
+        <div class="editor-container">
+            <div class="tabs" id="tabs"></div>
+            <textarea id="editor">// Escreva seu código LogicStart aqui</textarea>
+            <div class="terminal" id="terminal"></div>
+        </div>
+        <!-- Painel de IA -->
+        <div class="ai-panel">
+            <div class="chat" id="chat"></div>
+            <textarea id="ia-prompt" placeholder="Pergunte algo à IA ou peça código..."></textarea>
+            <button onclick="iaChat()">💬 Chat</button>
+            <button onclick="iaGerar()">📝 Gerar Código</button>
+            <button onclick="iaExplicar()">📖 Explicar Código</button>
+            <button onclick="iaCorrigir()">🛠 Corrigir Código</button>
+        </div>
+    </div>
+    <div class="status">
+        <span id="status">Pronto</span><span>LogicStart</span>
+    </div>
+    <script>
+// Variáveis
+const user_id = "default";
+let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+    mode: "python",
+    theme: "monokai",
+    lineNumbers: true,
+    autoCloseBrackets: true,
+    matchBrackets: true,
+    indentUnit: 4,
+    tabSize: 4
+});
 
-<div class="container" id="login-container">
-  <h2>LogicStart Elite Supreme</h2>
-  <input class="input-field" type="email" id="email" placeholder="Email">
-  <input class="input-field" type="password" id="senha" placeholder="Senha">
-  <button class="btn btn-primary" onclick="login()">Entrar</button>
-  <button class="btn btn-secondary" onclick="showRegister()">Criar Conta</button>
-  <div class="error" id="error"></div>
-</div>
+let arquivos = {}, atual = "main", modificados = {};
+let chatHist = [];
 
-<div class="container" id="register-container" style="display:none;">
-  <h2>Criar Conta</h2>
-  <input class="input-field" type="email" id="reg-email" placeholder="Email">
-  <input class="input-field" type="password" id="reg-senha" placeholder="Senha">
-  <button class="btn btn-primary" onclick="register()">Registrar</button>
-  <button class="btn btn-secondary" onclick="showLogin()">Voltar</button>
-  <div class="error" id="reg-error"></div>
-</div>
-
-<script>
-function showRegister() {
-  document.getElementById("login-container").style.display = "none";
-  document.getElementById("register-container").style.display = "block";
+// -------- STATUS --------
+function status(msg) {
+    document.getElementById("status").innerText = msg;
 }
 
-function showLogin() {
-  document.getElementById("register-container").style.display = "none";
-  document.getElementById("login-container").style.display = "block";
+function log(msg, type = "info") {
+    let t = document.getElementById("terminal");
+    let d = document.createElement("div");
+    d.className = type;
+    d.innerText = msg;
+    t.appendChild(d);
+    t.scrollTop = t.scrollHeight;
 }
 
-async function login() {
-  const email = document.getElementById("email").value;
-  const senha = document.getElementById("senha").value;
+// -------- FILES --------
+async function carregar() {
+    let r = await fetch(`/files?user_id=${user_id}`);
+    let d = await r.json();
+    arquivos = {};
+    d.data.forEach(f => arquivos[f.nome] = f.codigo);
+    if (!arquivos["main"]) arquivos["main"] = "";
+    abrir("main");
+    render();
+}
 
-  if (!email || !senha) {
-    document.getElementById("error").innerText = "Preencha todos os campos.";
-    return;
-  }
+function render() {
+    let f = document.getElementById("files");
+    let t = document.getElementById("tabs");
+    f.innerHTML = "";
+    t.innerHTML = "";
+    Object.keys(arquivos).forEach(n => {
+        let el = document.createElement("div");
+        el.className = "file " + (n === atual ? "active" : "");
+        el.innerText = n;
+        el.onclick = () => abrir(n);
+        f.appendChild(el);
 
-  try {
-    let r = await fetch("/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, senha }),
+        let tab = document.createElement("div");
+        tab.className = "tab " + (n === atual ? "active" : "") + (modificados[n] ? " modified" : "");
+        tab.innerText = n;
+        tab.onclick = () => abrir(n);
+        t.appendChild(tab);
+    });
+}
+
+function abrir(n) {
+    atual = n;
+    editor.setValue(arquivos[n]);
+    render();
+}
+
+function novoArquivo() {
+    let n = prompt("Nome do arquivo:");
+    if (!n) return;
+    arquivos[n] = "";
+    abrir(n);
+}
+
+// Detectar mudanças
+editor.on("change", () => {
+    modificados[atual] = true;
+    arquivos[atual] = editor.getValue();
+    render();
+    autoSave();
+});
+
+// Autosave
+let timeout;
+function autoSave() {
+    clearTimeout(timeout);
+    timeout = setTimeout(() => salvar(), 2000);
+}
+
+// Salvar
+async function salvar() {
+    status("Salvando...");
+    await fetch("/files", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, nome: atual, codigo: editor.getValue() })
+    });
+    modificados[atual] = false;
+    render();
+    status("Salvo");
+}
+
+// -------- EXECUÇÃO --------
+async function executar() {
+    status("Executando...");
+    let r = await fetch("/executar", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ codigo: editor.getValue(), user_id })
     });
     let d = await r.json();
-    if (d.success) {
-      localStorage.setItem("user_id", d.user_id);
-      window.location.href = "/ide.html";
-    } else {
-      document.getElementById("error").innerText = d.error || "Erro ao logar";
-    }
-  } catch (e) {
-    document.getElementById("error").innerText = "Erro de conexão";
-  }
+    log(d.data?.saida || d.mensagem, d.status === "ok" ? "success" : "error");
+    status("Finalizado");
 }
 
-async function register() {
-  const email = document.getElementById("reg-email").value;
-  const senha = document.getElementById("reg-senha").value;
+// -------- IA --------
+function addMsg(txt, cls) {
+    let c = document.getElementById("chat");
+    let d = document.createElement("div");
+    d.className = "msg " + cls;
+    d.innerText = txt;
+    c.appendChild(d);
+    c.scrollTop = c.scrollHeight;
+}
 
-  if (!email || !senha) {
-    document.getElementById("reg-error").innerText = "Preencha todos os campos.";
-    return;
-  }
+async function iaChat() { iaRequest("/ia/chat"); }
+async function iaGerar() { iaRequest("/ia/gerar"); }
+async function iaExplicar() { iaRequest("/ia/explicar"); }
+async function iaCorrigir() { iaRequest("/ia/corrigir"); }
 
-  try {
-    let r = await fetch("/register", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, senha }),
+async function iaRequest(url) {
+    const prompt = document.getElementById("ia-prompt").value;
+    if (!prompt) return;
+    chatHist.push({ role: "user", content: prompt });
+    addMsg("Você: " + prompt, "user");
+
+    let r = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ user_id, pedido: prompt, codigo: editor.getValue() })
     });
     let d = await r.json();
-    if (d.success) {
-      alert("Conta criada! Faça login.");
-      showLogin();
-    } else {
-      document.getElementById("reg-error").innerText = d.error || "Erro ao registrar";
-    }
-  } catch (e) {
-    document.getElementById("reg-error").innerText = "Erro de conexão";
-  }
+    chatHist.push({ role: "bot", content: d.data });
+    addMsg("IA: " + d.data, "bot");
 }
 
-if (localStorage.getItem("user_id")) {
-  window.location.href = "/ide.html";
+// -------- LOGOUT --------
+function logout() {
+    window.location.href = "/logout";
 }
+
+// -------- SHORTCUTS --------
+document.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && e.key === "s") { e.preventDefault(); salvar(); }
+    if (e.ctrlKey && e.key === "Enter") { executar(); }
+});
+
+// -------- INIT --------
+carregar();
 </script>
 
 </body>
