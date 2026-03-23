@@ -1,154 +1,172 @@
-// static/js/editor.js - LogicStart Elite Plus Mobile Ready
+// ===== LogicStart Elite ULTRA PLUS MAX =====
 
-// ===== Inicializa CodeMirror =====
+// Inicializa CodeMirror
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-    mode: {name:"python", version:3, singleLineStringErrors:false},
+    mode: "javascript", // futuramente pode criar modo "logicstart"
     theme: "dracula",
     lineNumbers: true,
     lineWrapping: true,
-    indentUnit: 4,
     tabSize: 4,
-    autofocus: true,
-    styleActiveLine: true,
-    matchBrackets: true
+    extraKeys: {
+        "Ctrl-Space": "autocomplete",
+        "Ctrl-D": function(cm){ cm.execCommand("selectNextOccurrence"); },
+        "Ctrl-/": function(cm){ cm.toggleComment(); },
+        "Ctrl-S": salvarLocal
+    }
 });
 
-// ===== Arquivos locais =====
-let arquivos = JSON.parse(localStorage.getItem("arquivos")) || {
-    "main": "# Seu código LogicStart aqui\n",
+// ===== Palavras-chave da linguagem em português =====
+const LS_KEYWORDS = [
+    "imprimir","variável","se","senão","enquanto","para",
+    "função","retornar","verdadeiro","falso","nulo"
+];
+const LS_FUNCS = {
+    "imprimir": "Exibe texto ou valor no terminal",
+    "variável": "Declara uma variável",
+    "se": "Condição verdadeira",
+    "enquanto": "Loop enquanto condição verdadeira",
+    "função": "Define uma função",
+    "retornar": "Retorna um valor"
+};
+
+// ===== Multi-arquivos com localStorage =====
+let arquivos = JSON.parse(localStorage.getItem("logicstart_arquivos")) || {
+    "principal": "// Código principal\n",
     "teste": "// Código de teste\n"
 };
-let arquivoAtivo = "main";
+let arquivoAtivo = Object.keys(arquivos)[0];
 
 // ===== Terminal =====
 let terminal = document.getElementById("terminal");
-function limparTerminal() { terminal.innerHTML = ""; }
-function logTerminal(texto, tipo="info") {
+function logTerminal(msg,tipo="info"){
     let div = document.createElement("div");
     div.className = tipo;
-    div.innerHTML = texto.replace(/\n/g,"<br>");
+    div.innerHTML = msg.replace(/\n/g,"<br>");
     terminal.appendChild(div);
     terminal.scrollTop = terminal.scrollHeight;
 }
+function limparTerminal(){ terminal.innerHTML=""; }
 
-// ===== Abas e gerenciamento =====
-function atualizarAbas() {
-    const tabBar = document.getElementById("tab-bar");
-    tabBar.innerHTML = "";
-
-    Object.keys(arquivos).forEach(nome => {
-        let div = document.createElement("div");
-        div.textContent = nome + ".ls";
-        div.className = (nome === arquivoAtivo) ? "tab active" : "tab";
-
-        div.onclick = () => abrirArquivo(nome);
-
-        // Drag & Drop para reorganizar
-        div.draggable = true;
-        div.ondragstart = (e) => e.dataTransfer.setData("text", nome);
-        div.ondragover = (e) => e.preventDefault();
-        div.ondrop = (e) => {
-            const from = e.dataTransfer.getData("text");
-            const to = nome;
-            if(from !== to){
-                let keys = Object.keys(arquivos);
-                keys.splice(keys.indexOf(from), 1);
-                keys.splice(keys.indexOf(to), 0, from);
-                let novos = {};
-                keys.forEach(k => novos[k] = arquivos[k]);
-                arquivos = novos;
-                salvarArquivos();
-                atualizarAbas();
-            }
-        };
-
-        tabBar.appendChild(div);
+// ===== Arquivos =====
+function salvarLocal(){
+    atualizarArquivo();
+    localStorage.setItem("logicstart_arquivos", JSON.stringify(arquivos));
+    logTerminal(`Arquivos salvos localmente`, "success");
+}
+function atualizarArquivo(){
+    arquivos[arquivoAtivo] = editor.getValue();
+}
+function abrirArquivo(nome){
+    if(!arquivos[nome]) return logTerminal(`Arquivo '${nome}' não existe`,"error");
+    arquivoAtivo=nome;
+    editor.setValue(arquivos[nome]);
+    atualizarAbas();
+    logTerminal(`Arquivo '${nome}' aberto`,"info");
+}
+function atualizarAbas(){
+    const tabBar=document.getElementById("tab-bar");
+    const fileList=document.getElementById("file-list");
+    tabBar.innerHTML="";
+    fileList.innerHTML="";
+    Object.keys(arquivos).forEach(nome=>{
+        // Abas
+        let tab=document.createElement("div");
+        tab.textContent=nome+".ls";
+        tab.className=(nome===arquivoAtivo)?"tab active":"tab";
+        tab.onclick=()=>abrirArquivo(nome);
+        tabBar.appendChild(tab);
+        // Lista lateral
+        let fdiv=document.createElement("div");
+        fdiv.textContent=nome+".ls";
+        fdiv.className=(nome===arquivoAtivo)?"active":"";
+        fdiv.onclick=()=>abrirArquivo(nome);
+        fileList.appendChild(fdiv);
     });
 }
 
-function abrirArquivo(nome) {
-    if(!arquivos[nome]) return logTerminal(`Arquivo '${nome}' não existe`, "error");
-    atualizarArquivoAtivo();
-    arquivoAtivo = nome;
-    editor.setValue(arquivos[nome]);
-    atualizarAbas();
-}
-
-function abrirAba(nome){ abrirArquivo(nome); }
-function atualizarArquivoAtivo(){ arquivos[arquivoAtivo] = editor.getValue(); salvarArquivos(); }
-
-// ===== Salvar arquivos no LocalStorage =====
-function salvarArquivos(){
-    localStorage.setItem("arquivos", JSON.stringify(arquivos));
-}
-
-// ===== Criar novo arquivo =====
+// ===== Novo e remover =====
 function novoArquivo(){
-    let nome = prompt("Nome do novo arquivo (somente letras/números/_):");
-    if(!nome) return;
-    nome = nome.replace(/\W/g,"_");
-    if(arquivos[nome]) return logTerminal(`Arquivo '${nome}' já existe`, "error");
-    arquivos[nome] = "// Novo arquivo\n";
-    abrirArquivo(nome);
-    logTerminal(`Arquivo '${nome}.ls' criado!`, "success");
+    let nome=prompt("Nome do novo arquivo:").replace(/\W/g,"_");
+    if(!nome||arquivos[nome]) return logTerminal("Arquivo inválido ou já existe","error");
+    arquivos[nome]="// Novo arquivo\n";
+    arquivoAtivo=nome;
+    atualizarAbas();
+    editor.setValue(arquivos[nome]);
+    salvarLocal();
 }
-
-// ===== Remover arquivo =====
 function removerArquivo(){
-    if(arquivoAtivo === "main") return logTerminal("Não é possível remover o main", "error");
-    logTerminal(`Arquivo '${arquivoAtivo}.ls' removido`, "info");
+    if(arquivoAtivo==="principal") return logTerminal("Não é possível remover o arquivo principal","error");
     delete arquivos[arquivoAtivo];
-    arquivoAtivo = Object.keys(arquivos)[0];
+    arquivoAtivo=Object.keys(arquivos)[0];
     abrirArquivo(arquivoAtivo);
+    salvarLocal();
 }
 
-// ===== Download do arquivo atual =====
-function baixarArquivo(){
-    atualizarArquivoAtivo();
-    const blob = new Blob([arquivos[arquivoAtivo]], {type:"text/plain"});
-    const link = document.createElement("a");
-    link.href = URL.createObjectURL(blob);
-    link.download = arquivoAtivo + ".ls";
-    link.click();
-    logTerminal(`Arquivo '${arquivoAtivo}.ls' baixado!`, "success");
-}
-
-// ===== Upload de arquivo =====
-function carregarArquivo(input){
-    const file = input.files[0];
-    if(!file) return;
-    const reader = new FileReader();
-    reader.onload = function(e){
-        let nome = file.name.replace(/\W/g,"_").replace(/\.ls$/,"");
-        arquivos[nome] = e.target.result;
-        abrirArquivo(nome);
-        logTerminal(`Arquivo '${file.name}' carregado!`, "success");
-    }
-    reader.readAsText(file);
-    input.value = "";
-}
-
-// ===== Executar código local simulado =====
+// ===== Executar código =====
 function executarCodigo(){
-    atualizarArquivoAtivo();
-    let codigo = arquivos[arquivoAtivo];
-    logTerminal(`> Executando '${arquivoAtivo}.ls' (simulado)...`, "info");
+    atualizarArquivo();
+    let code = editor.getValue();
+    logTerminal("> Executando código...","info");
     try{
-        // Aqui você pode adicionar a execução real do seu parser
-        logTerminal("Resultado simulado:\n" + codigo, "success");
+        // Simulação: apenas eval JS para teste
+        let result = eval(code);
+        logTerminal(result!==undefined?result:"Executado","success");
     }catch(e){
-        logTerminal("Erro: " + e.message, "error");
+        logTerminal(e,"error");
     }
 }
 
-// ===== Botões flutuantes =====
-document.getElementById("run-btn").onclick = executarCodigo;
-document.getElementById("save-btn").onclick = atualizarArquivoAtivo;
-document.getElementById("clear-btn").onclick = limparTerminal;
+// ===== Download / Upload =====
+function baixarArquivo(){
+    atualizarArquivo();
+    let blob = new Blob([arquivos[arquivoAtivo]], {type:"text/plain"});
+    let a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = arquivoAtivo+".ls";
+    a.click();
+}
+function uploadArquivo(){
+    let input=document.getElementById("upload-input");
+    input.click();
+    input.onchange=e=>{
+        let file=e.target.files[0];
+        if(!file) return;
+        let reader=new FileReader();
+        reader.onload=function(evt){
+            let nome=file.name.replace(/\W/g,"_").replace(/\.ls$/,"");
+            arquivos[nome]=evt.target.result;
+            arquivoAtivo=nome;
+            atualizarAbas();
+            editor.setValue(evt.target.result);
+            salvarLocal();
+            logTerminal(`Arquivo '${file.name}' importado`,"success");
+        };
+        reader.readAsText(file);
+        input.value="";
+    };
+}
+
+// ===== Autocomplete Contextual =====
+CodeMirror.registerHelper("hint","anyword",function(cm){
+    let cur=cm.getCursor();
+    let token=cm.getTokenAt(cur);
+    let start=token.start, end=cur.ch;
+    let word=token.string.slice(0,end-start).toLowerCase();
+    let list = LS_KEYWORDS.filter(k=>k.startsWith(word));
+    return {list:list, from:CodeMirror.Pos(cur.line,start), to:CodeMirror.Pos(cur.line,end)};
+});
+
+// ===== Botões =====
+document.getElementById("run-btn").onclick=executarCodigo;
+document.getElementById("run-float").onclick=executarCodigo;
+document.getElementById("save-btn").onclick=salvarLocal;
+document.getElementById("save-float").onclick=salvarLocal;
+document.getElementById("clear-btn").onclick=limparTerminal;
+document.getElementById("clear-float").onclick=limparTerminal;
+document.getElementById("new-btn").onclick=novoArquivo;
+document.getElementById("del-btn").onclick=removerArquivo;
+document.getElementById("download-btn").onclick=baixarArquivo;
+document.getElementById("upload-btn").onclick=uploadArquivo;
 
 // ===== Inicialização =====
-document.addEventListener("DOMContentLoaded", ()=>{
-    atualizarAbas();
-    abrirArquivo("main");
-    logTerminal("LogicStart Elite Mobile Ready inicializado!", "info");
-});
+abrirArquivo(arquivoAtivo);
