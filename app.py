@@ -1,8 +1,7 @@
 from flask import Flask, request, jsonify, render_template, redirect, session
 from functools import wraps
+import os, json, hashlib, time
 from collections import defaultdict
-from datetime import datetime
-import os, time, json, hashlib
 
 from parser_novo import ParserNovo
 from executor_nodes import ExecutorNodes
@@ -11,255 +10,161 @@ from executor_nodes import ExecutorNodes
 # CONFIG
 # =========================
 app = Flask(__name__)
-app.secret_key = os.getenv("SECRET_KEY", "ultra-secret")
 
-BASE_DIR = "data"
-os.makedirs(BASE_DIR, exist_ok=True)
+app.secret_key = "super-secret-key-fixa"
 
-OPENAI_KEY = os.getenv("OPENAI_API_KEY")
+app.config["SESSION_COOKIE_SECURE"] = False
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 
+USERS_FILE = "users.json"
 RATE_LIMIT = defaultdict(list)
+
+# =========================
+# UTILS
+# =========================
+def now():
+    return int(time.time())
+
+def hash_password(p):
+    return hashlib.sha256(p.encode()).hexdigest()
+
+def user():
+    return session.get("user")
+
+def load_users():
+    if not os.path.exists(USERS_FILE):
+        return {}
+    return json.load(open(USERS_FILE))
+
+def save_users(data):
+    json.dump(data, open(USERS_FILE, "w"), indent=2)
 
 # =========================
 # SEGURANÇA
 # =========================
 def rate_limit():
     ip = request.remote_addr or "unknown"
-    now = time.time()
+    t = now()
 
-    RATE_LIMIT[ip] = [t for t in RATE_LIMIT[ip] if now - t < 10]
+    RATE_LIMIT[ip] = [x for x in RATE_LIMIT[ip] if t - x < 10]
 
-    if len(RATE_LIMIT[ip]) > 25:
+    if len(RATE_LIMIT[ip]) > 30:
         return False
 
-    RATE_LIMIT[ip].append(now)
+    RATE_LIMIT[ip].append(t)
     return True
-
-def sanitize_code(code):
-    proibidos = ["import os", "import sys", "__", "eval(", "exec("]
-    for p in proibidos:
-        if p in code:
-            raise Exception(f"Uso proibido: {p}")
-    return code
-
-# =========================
-# UTILS
-# =========================
-def user():
-    return session.get("user_id")
 
 def login_required(f):
     @wraps(f)
     def wrapper(*args, **kwargs):
         if not user():
-            return jsonify({"status": "erro", "mensagem": "Não autenticado"}), 401
+            return redirect("/login")
         if not rate_limit():
-            return jsonify({"status": "erro", "mensagem": "Muitas requisições"}), 429
+            return "Muitas requisições", 429
         return f(*args, **kwargs)
     return wrapper
 
-def user_dir():
-    uid = user()
-    hashed = hashlib.md5(uid.encode()).hexdigest()
-    path = os.path.join(BASE_DIR, hashed)
-    os.makedirs(path, exist_ok=True)
-    return path
-
-def log(event, data=None):
-    print(json.dumps({
-        "time": datetime.utcnow().isoformat(),
-        "event": event,
-        "user": user(),
-        "data": data
-    }))
+def sanitize(code):
+    proibido = ["import os","import sys","__","eval(","exec("]
+    for p in proibido:
+        if p in code:
+            raise Exception(f"Bloqueado: {p}")
+    return code
 
 # =========================
-# ROTAS WEB
+# ROTAS WEB (ALINHADAS COM SEUS HTML)
 # =========================
+
+# INDEX (sua página inicial)
 @app.route("/")
 def index():
-    return redirect("/ide" if user() else "/login")
+    return render_template("index.html")
 
-@app.route("/login", methods=["GET", "POST"])
+# LOGIN
+@app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email", "").strip()
-        senha = request.form.get("senha", "").strip()
+        email = request.form.get("email","").strip()
+        senha = request.form.get("senha","").strip()
 
-        if (email == "admin" and senha == "1234") or (email == "" and senha == ""):
-            session["user_id"] = email or "guest"
-            log("login", email)
+        users = load_users()
+
+        if email in users and users[email]["password"] == hash_password(senha):
+            session["user"] = email
             return redirect("/ide")
+
+        return render_template("login.html", erro="Login inválido")
 
     return render_template("login.html")
 
-@app.route("/logout")
-def logout():
-    log("logout")
-    session.clear()
+# REGISTRO
+@app.route("/register", methods=["POST"])
+def register():
+    email = request.form.get("email","").strip()
+    senha = request.form.get("senha","").strip()
+
+    users = load_users()
+
+    if email in users:
+        return render_template("login.html", erro="Usuário já existe")
+
+    users[email] = {
+        "password": hash_password(senha),
+        "created": now()
+    }
+
+    save_users(users)
+
     return redirect("/login")
 
+# LOGOUT
+@app.route("/logout")
+def logout():
+    session.clear()
+    return redirect("/")
+
+# IDE (SUA PÁGINA ide.html)
 @app.route("/ide")
-def ide():
-    if not user():
-        return redirect("/login")
-    return render_template("ide.html")
-
-# =========================
-# EXECUÇÃO
-# =========================
-@app.route("/executar", methods=["POST"])
 @login_required
-def executar():
+def ide():
+    return render_template("ide.html", user=user())
+
+# =========================
+# EXECUÇÃO (LIGA COM IDE)
+# =========================
+@app.route("/run", methods=["POST"])
+@login_required
+def run():
     try:
-        data = request.get_json(force=True)
-        codigo = data.get("codigo", "")
+        data = request.get_json()
+        code = sanitize(data.get("code",""))
 
-        codigo = sanitize_code(codigo)
-
-        parser = ParserNovo(codigo)
+        parser = ParserNovo(code)
         nodes = parser.parse()
 
         executor = ExecutorNodes(nodes)
-        resultado = executor.executar()
-
-        salvar_historico(codigo)
-        log("run", {"size": len(codigo)})
+        result = executor.executar()
 
         return jsonify({
-            "status": "ok",
-            "data": {"saida": resultado}
+            "ok": True,
+            "result": result
         })
 
     except Exception as e:
-        log("erro_exec", str(e))
         return jsonify({
-            "status": "erro",
-            "mensagem": str(e)
+            "ok": False,
+            "error": str(e)
         })
 
 # =========================
-# ARQUIVOS
+# STATUS (DEBUG)
 # =========================
-@app.route("/files", methods=["GET"])
-@login_required
-def files_get():
-    path = user_dir()
-    arquivos = []
-
-    for f in os.listdir(path):
-        if f.endswith(".txt"):
-            with open(os.path.join(path, f), "r", encoding="utf-8") as file:
-                arquivos.append({
-                    "nome": f.replace(".txt", ""),
-                    "codigo": file.read()
-                })
-
-    return jsonify({"data": arquivos})
-
-@app.route("/files", methods=["POST"])
-@login_required
-def files_post():
-    try:
-        data = request.get_json(force=True)
-
-        nome = data.get("nome", "main")
-        codigo = data.get("codigo", "")
-
-        path = user_dir()
-
-        with open(os.path.join(path, nome + ".txt"), "w", encoding="utf-8") as f:
-            f.write(codigo)
-
-        log("save", nome)
-
-        return jsonify({"status": "ok"})
-
-    except Exception as e:
-        return jsonify({"status": "erro", "mensagem": str(e)})
-
-# =========================
-# HISTÓRICO
-# =========================
-def salvar_historico(codigo):
-    path = user_dir()
-    file = os.path.join(path, "history.log")
-
-    with open(file, "a", encoding="utf-8") as f:
-        f.write(f"{int(time.time())}|{codigo[:200]}\n")
-
-@app.route("/history")
-@login_required
-def history():
-    path = user_dir()
-    file = os.path.join(path, "history.log")
-
-    if not os.path.exists(file):
-        return jsonify([])
-
-    with open(file, encoding="utf-8") as f:
-        linhas = f.readlines()[-20:]
-
-    return jsonify(linhas)
-
-# =========================
-# IA
-# =========================
-@app.route("/ia/chat", methods=["POST"])
-@login_required
-def ia_chat():
-    msg = request.json.get("mensagem", "")
+@app.route("/status")
+def status():
     return jsonify({
-        "status": "ok",
-        "data": openai_call(msg)
+        "logado": bool(user()),
+        "user": user()
     })
-
-@app.route("/ia/gerar", methods=["POST"])
-@login_required
-def ia_gerar():
-    pedido = request.json.get("pedido", "")
-    prompt = f"Crie código LogicStart:\n{pedido}"
-
-    return jsonify({
-        "status": "ok",
-        "data": openai_call(prompt)
-    })
-
-# =========================
-# OPENAI
-# =========================
-def openai_call(prompt):
-    if not OPENAI_KEY:
-        return "⚠ Configure OPENAI_API_KEY"
-
-    try:
-        from openai import OpenAI
-        client = OpenAI(api_key=OPENAI_KEY)
-
-        res = client.chat.completions.create(
-            model="gpt-4o-mini",
-            messages=[{"role": "user", "content": prompt}],
-            temperature=0.7
-        )
-
-        return res.choices[0].message.content
-
-    except Exception as e:
-        return f"Erro IA: {e}"
-
-# =========================
-# ERROS
-# =========================
-@app.errorhandler(404)
-def not_found(e):
-    return redirect("/")
-
-@app.errorhandler(500)
-def server_error(e):
-    return jsonify({
-        "status": "erro",
-        "mensagem": "Erro interno do servidor"
-    }), 500
 
 # =========================
 # START
