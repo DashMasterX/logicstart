@@ -1,6 +1,6 @@
-// ===== Editor LogicStart Elite Pro Max Plus =====
+// static/js/editor.js - LogicStart Elite Pro Max Plus (estilo Pydroid 3)
 
-// Inicializa CodeMirror
+// ===== Inicializa CodeMirror =====
 let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
     mode: {name:"python", version:3, singleLineStringErrors:false},
     theme: "dracula",
@@ -13,9 +13,7 @@ let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
 // ===== Arquivos e armazenamento =====
 let arquivos = JSON.parse(localStorage.getItem("ls_arquivos")) || {
     "main": "# Seu código LogicStart aqui\n",
-    "teste": "// Código de teste\n"
 };
-
 let arquivoAtivo = Object.keys(arquivos)[0];
 
 // ===== Terminal =====
@@ -44,15 +42,15 @@ function atualizarAbas() {
         aba.onclick = () => abrirArquivo(nome);
         aba.draggable = true;
 
-        // Arrastar abas
-        aba.ondragstart = (e) => e.dataTransfer.setData("text", nome);
-        aba.ondragover = (e) => e.preventDefault();
-        aba.ondrop = (e) => {
+        // Drag & drop de abas
+        aba.ondragstart = e => e.dataTransfer.setData("text", nome);
+        aba.ondragover = e => e.preventDefault();
+        aba.ondrop = e => {
             let from = e.dataTransfer.getData("text");
             if (from === nome) return;
             let keys = Object.keys(arquivos);
-            keys.splice(keys.indexOf(from), 1);
-            keys.splice(keys.indexOf(nome), 0, from);
+            keys.splice(keys.indexOf(from),1);
+            keys.splice(keys.indexOf(nome),0,from);
             let newArquivos = {};
             keys.forEach(k => newArquivos[k] = arquivos[k]);
             arquivos = newArquivos;
@@ -117,7 +115,7 @@ function executarCodigo() {
     logTerminal("> Executando código...", "info");
 
     try {
-        // Simula execução (apenas exibe o código numerado)
+        // Simula execução do código
         let resultado = "Resultado da execução:\n" + codigo.split("\n").map((l,i)=>`${i+1}: ${l}`).join("\n");
         logTerminal(resultado, "success");
     } catch(e) {
@@ -160,10 +158,16 @@ function importarArquivo() {
     input.click();
 }
 
-// ===== Menu de opções nos três pontinhos =====
-document.getElementById("menu-btn")?.addEventListener("click", () => {
-    let menu = document.getElementById("menu-options");
-    menu.style.display = menu.style.display === "block" ? "none" : "block";
+// ===== Menu três pontinhos =====
+const menuBtn = document.querySelector(".menu-btn");
+const menuContent = document.querySelector(".menu-content");
+menuBtn.addEventListener("click", () => {
+    menuContent.style.display = menuContent.style.display === "block" ? "none" : "block";
+});
+document.addEventListener("click", e => {
+    if (!menuBtn.contains(e.target) && !menuContent.contains(e.target)) {
+        menuContent.style.display = "none";
+    }
 });
 
 // ===== Inicialização =====
