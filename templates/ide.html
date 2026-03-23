@@ -6,137 +6,281 @@
 <title>LogicStart Elite IDE</title>
 
 <!-- CodeMirror 6 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/dracula.css">
 <script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/javascript/javascript.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/python/python.js"></script>
 
 <style>
+:root {
+  --bg:#0f0f1a;
+  --bg2:#1a1a2e;
+  --bg3:#23233a;
+  --primary:#6e6ef8;
+  --text:#f1f1f1;
+  --success:#4caf50;
+  --error:#ff5c5c;
+  --info:#00bcd4;
+}
+
 body {
-    margin:0;
-    font-family:'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
-    color:#e0e0e0;
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  background: var(--bg);
+  color: var(--text);
 }
-#ide-container {
-    max-width: 1200px;
-    margin: 20px auto;
-    padding: 20px;
+
+/* HEADER */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px 20px;
+  background:var(--bg2);
+  border-bottom:2px solid var(--primary);
+  position: sticky;
+  top:0;
+  z-index:10;
 }
-.cm-editor { height: 400px; border-radius: 8px; }
-.controls { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
-.controls .btn { flex:1; min-width:120px; padding:10px; border:none; border-radius:8px; cursor:pointer; transition:0.2s; }
-.controls .btn:hover { opacity:0.85; }
-.btn-run { background:#3a78d7; color:#fff; }
-.btn-save { background:#28a745; color:#fff; }
-.btn-history { background:#ffc107; color:#000; }
-.btn-logout { background:#dc3545; color:#fff; }
-#saida {
-    margin-top:15px;
-    background:#111;
-    padding:15px;
-    border-radius:8px;
-    min-height:200px;
-    font-family:monospace;
-    white-space:pre-wrap;
-    overflow-y:auto;
+header h1 {margin:0; font-size:18px;}
+header .buttons button{
+  margin-left:5px;
+  padding:6px 10px;
+  border:none;
+  border-radius:5px;
+  background:var(--primary);
+  color:white;
+  cursor:pointer;
+  transition:.2s;
 }
-.ia-panel { margin-top:20px; background:#202020; padding:15px; border-radius:8px; }
-.ia-panel h3 { margin:0 0 10px 0; font-size:16px; }
-.ia-panel textarea { width:100%; height:60px; background:#121212; color:#fff; border:none; border-radius:5px; padding:8px; margin-bottom:10px; font-family:monospace; }
-.ia-panel button { padding:8px 12px; border:none; border-radius:5px; cursor:pointer; background:#3a78d7; color:#fff; transition:0.2s; margin-right:5px; }
-.ia-panel button:hover { opacity:0.85; }
+header .buttons button:hover{opacity:.85;}
+
+/* MAIN LAYOUT */
+main{
+  flex:1;
+  display:flex;
+  overflow:hidden;
+}
+
+/* SIDEBAR */
+.sidebar{
+  width:220px;
+  background:var(--bg2);
+  border-right:2px solid var(--primary);
+  overflow-y:auto;
+  padding:10px;
+}
+.sidebar .file{
+  padding:6px 10px;
+  margin:4px 0;
+  border-radius:5px;
+  cursor:pointer;
+  transition:.2s;
+}
+.sidebar .file:hover{background:#333;}
+.sidebar .file.active{background:var(--primary); color:white;}
+
+/* EDITOR + TERMINAL */
+.editor-container{
+  flex:1;
+  display:flex;
+  flex-direction:column;
+}
+#editor{flex:1; border-radius:5px;}
+.terminal{
+  height:150px;
+  background:#111;
+  padding:10px;
+  overflow:auto;
+  font-family:monospace;
+  margin-top:5px;
+  border-radius:5px;
+}
+.terminal .success{color:var(--success);}
+.terminal .error{color:var(--error);}
+.terminal .info{color:var(--info);}
+
+/* IA PANEL */
+.ia-panel{
+  width:300px;
+  background:var(--bg2);
+  border-left:2px solid var(--primary);
+  display:flex;
+  flex-direction:column;
+  padding:10px;
+}
+.ia-panel textarea{
+  flex:1;
+  margin-bottom:5px;
+  border:none;
+  border-radius:5px;
+  padding:8px;
+  background:#121212;
+  color:white;
+  font-family:monospace;
+}
+.ia-panel button{
+  padding:6px 10px;
+  margin:2px 0;
+  border:none;
+  border-radius:5px;
+  background:var(--primary);
+  color:white;
+  cursor:pointer;
+  transition:.2s;
+}
+.ia-panel button:hover{opacity:.85;}
+.ia-panel #ia-resposta{
+  flex:1;
+  margin-top:5px;
+  background:#111;
+  border-radius:5px;
+  padding:6px;
+  font-family:monospace;
+  overflow:auto;
+  white-space:pre-wrap;
+}
 </style>
 </head>
 <body>
 
-<div id="ide-container">
-    <textarea id="codigo">// Escreva seu código LogicStart aqui</textarea>
+<header>
+  <h1>LogicStart Elite IDE</h1>
+  <div class="buttons">
+    <button onclick="novoArquivo()">📄 Novo</button>
+    <button onclick="salvar()">💾 Salvar</button>
+    <button onclick="executar()">▶ Executar</button>
+    <button onclick="verHistorico()">📜 Histórico</button>
+    <button onclick="logout()">⏏ Logout</button>
+  </div>
+</header>
 
-    <div class="controls">
-        <button class="btn btn-run" onclick="executar()">Executar</button>
-        <button class="btn btn-save" onclick="salvar()">Salvar</button>
-        <button class="btn btn-history" onclick="verHistorico()">Histórico</button>
-        <button class="btn btn-logout" onclick="logout()">Logout</button>
-    </div>
+<main>
+  <div class="sidebar" id="files"></div>
 
-    <div id="saida">Saída do programa aparecerá aqui...</div>
+  <div class="editor-container">
+    <textarea id="editor">// Escreva seu código LogicStart aqui</textarea>
+    <div class="terminal" id="terminal"></div>
+  </div>
 
-    <div class="ia-panel">
-        <h3>Assistente IA</h3>
-        <textarea id="ia-prompt" placeholder="Pergunte algo à IA ou peça código..."></textarea>
-        <button onclick="iaChat()">💬 Chat</button>
-        <button onclick="iaGerar()">📝 Gerar Código</button>
-        <button onclick="iaExplicar()">📖 Explicar Código</button>
-        <button onclick="iaCorrigir()">🛠 Corrigir Código</button>
-        <div id="ia-resposta" style="margin-top:10px; white-space:pre-wrap; font-family:monospace;"></div>
-    </div>
-</div>
+  <div class="ia-panel">
+    <h3>Assistente IA</h3>
+    <textarea id="ia-prompt" placeholder="Pergunte à IA ou peça código..."></textarea>
+    <button onclick="iaChat()">💬 Chat</button>
+    <button onclick="iaGerar()">📝 Gerar Código</button>
+    <button onclick="iaExplicar()">📖 Explicar Código</button>
+    <button onclick="iaCorrigir()">🛠 Corrigir Código</button>
+    <div id="ia-resposta"></div>
+  </div>
+</main>
 
 <script>
-let editor = CodeMirror.fromTextArea(document.getElementById("codigo"), {
-    mode: "javascript",
-    theme: "monokai",
-    lineNumbers: true,
-    autoCloseBrackets: true,
-    matchBrackets: true,
-    indentUnit: 4,
-    tabSize: 4,
-    styleActiveLine: true
+let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
+    mode:"python",
+    theme:"dracula",
+    lineNumbers:true,
+    autoCloseBrackets:true,
+    matchBrackets:true,
+    indentUnit:4,
+    tabSize:4
 });
 
-// -------- FUNÇÕES IDE --------
-function executar(){
-    fetch("/executar", {
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({codigo: editor.getValue(), user_id:"default"})
-    })
-    .then(r=>r.json()).then(d=>{
-        document.getElementById("saida").textContent = d.status==="ok" ? d.data.saida : "Erro: "+d.mensagem;
+let arquivos={}, atual="main", modificados={}, chatHist=[];
+
+// -------------- FUNÇÕES IDE ----------------
+function status(msg,type="info"){
+    let t=document.getElementById("terminal");
+    let d=document.createElement("div");
+    d.className=type;
+    d.textContent=msg;
+    t.appendChild(d);
+    t.scrollTop=t.scrollHeight;
+}
+
+async function carregar(){
+    let r=await fetch("/files?user_id=default");
+    let d=await r.json();
+    arquivos={}; d.data.forEach(f=>arquivos[f.nome]=f.codigo);
+    if(!arquivos["main"]) arquivos["main"]="";
+    abrir("main");
+    renderFiles();
+}
+
+function renderFiles(){
+    let f=document.getElementById("files"); f.innerHTML="";
+    Object.keys(arquivos).forEach(n=>{
+        let el=document.createElement("div");
+        el.className="file "+(n===atual?"active":"");
+        el.textContent=n;
+        el.onclick=()=>abrir(n);
+        f.appendChild(el);
     });
 }
 
-function salvar(){
-    fetch("/files", {
+function abrir(n){ atual=n; editor.setValue(arquivos[n]); renderFiles(); }
+
+function novoArquivo(){ let n=prompt("Nome do arquivo:"); if(!n)return; arquivos[n]=""; abrir(n); }
+
+editor.on("change",()=>{
+    modificados[atual]=true;
+    arquivos[atual]=editor.getValue();
+    autoSave();
+});
+
+let timeout;
+function autoSave(){ clearTimeout(timeout); timeout=setTimeout(()=>salvar(),2000); }
+
+async function salvar(){
+    await fetch("/files",{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({codigo: editor.getValue(), nome:"main", user_id:"default"})
-    })
-    .then(r=>r.json()).then(d=>{
-        alert(d.status==="ok" ? "Arquivo salvo!" : "Erro ao salvar");
+        body:JSON.stringify({user_id:"default", nome:atual, codigo:editor.getValue()})
     });
+    modificados[atual]=false;
+    status("Arquivo salvo: "+atual,"info");
 }
 
-function verHistorico(){
-    fetch("/history")
-    .then(r=>r.json()).then(d=>{
-        if(!d.length){ alert("Nenhum histórico"); return; }
-        let txt = d.map((l,i)=>`${i+1} - ${l}`).join("\n");
-        document.getElementById("saida").textContent = txt;
+async function executar(){
+    status("Executando...","info");
+    let r=await fetch("/executar",{
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({codigo:editor.getValue(), user_id:"default"})
     });
+    let d=await r.json();
+    status(d.status==="ok"?d.data.saida:"Erro: "+d.mensagem, d.status==="ok"?"success":"error");
+}
+
+async function verHistorico(){
+    let r=await fetch("/history?user_id=default");
+    let d=await r.json();
+    if(!d.length){ alert("Nenhum histórico"); return; }
+    d.forEach((l,i)=>status(`${i+1} - ${l}`,"info"));
 }
 
 function logout(){ window.location.href="/logout"; }
 
-// -------- FUNÇÕES IA --------
-function iaChat(){ iaRequest("/ia/chat"); }
-function iaGerar(){ iaRequest("/ia/gerar"); }
-function iaExplicar(){ iaRequest("/ia/explicar"); }
-function iaCorrigir(){ iaRequest("/ia/corrigir"); }
+// -------------- FUNÇÕES IA ----------------
+async function iaChat(){ await iaRequest("/ia/chat"); }
+async function iaGerar(){ await iaRequest("/ia/gerar"); }
+async function iaExplicar(){ await iaRequest("/ia/explicar"); }
+async function iaCorrigir(){ await iaRequest("/ia/corrigir"); }
 
-function iaRequest(url){
-    const prompt = document.getElementById("ia-prompt").value;
-    fetch(url, {
+async function iaRequest(url){
+    let prompt=document.getElementById("ia-prompt").value;
+    let r=await fetch(url,{
         method:"POST",
         headers:{"Content-Type":"application/json"},
-        body:JSON.stringify({mensagem: prompt, codigo: editor.getValue(), user_id:"default", pedido: prompt})
-    })
-    .then(r=>r.json()).then(d=>{
-        document.getElementById("ia-resposta").textContent = d.status==="ok" ? d.data : "Erro IA";
+        body:JSON.stringify({user_id:"default", codigo:editor.getValue(), mensagem:prompt, pedido:prompt})
     });
+    let d=await r.json();
+    document.getElementById("ia-resposta").textContent=d.status==="ok"?d.data:"Erro IA";
 }
+
+// ---------------- INIT ----------------
+carregar();
 </script>
 
 </body>
