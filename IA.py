@@ -1,40 +1,24 @@
-# IA.py - LogicStart AI Enterprise Ultimate
-
+# IA.py - LogicStart AI Enterprise Ultra
 from openai import OpenAI
 from pymongo import MongoClient
 from datetime import datetime
 import hashlib
-import numpy as np
 
 class IA:
-    """
-    Classe IA para LogicStart IDE
-    Funções:
-        - Gerar código
-        - Corrigir código
-        - Explicar código
-        - Sugerir autocomplete
-        - Analisar código
-        - Contexto inteligente com histórico e arquivos relevantes
-    """
-
     def __init__(self, api_key=None, mongo_uri="mongodb://localhost:27017/"):
-        # Cliente OpenAI
         self.client = OpenAI(api_key=api_key) if api_key else None
-
-        # MongoDB
         self.mongo = MongoClient(mongo_uri)
         self.db = self.mongo["logicstart"]
         self.chat_col = self.db["chat"]
         self.code_col = self.db["code"]
+        self.embed_col = self.db["embeddings"]
 
-    # ================= HASH =================
+    # ---------------- HASH ----------------
     def _hash(self, text):
         return hashlib.md5(text.encode()).hexdigest()
 
-    # ================= EMBEDDINGS =================
+    # ---------------- EMBEDDINGS ----------------
     def gerar_embedding(self, texto):
-        """Cria embedding do texto usando OpenAI"""
         if not self.client:
             return []
         emb = self.client.embeddings.create(
@@ -43,9 +27,8 @@ class IA:
         )
         return emb.data[0].embedding
 
-    # ================= GERENCIAR CÓDIGO =================
+    # ---------------- ARQUIVOS ----------------
     def salvar_codigo(self, user_id, nome, codigo):
-        """Salva código no MongoDB com embedding"""
         emb = self.gerar_embedding(codigo)
         self.code_col.update_one(
             {"user_id": user_id, "nome": nome},
@@ -53,51 +36,59 @@ class IA:
             upsert=True
         )
 
-    def buscar_codigo_relevante(self, user_id, pergunta, top=3):
-        """Retorna arquivos mais relevantes ao contexto da pergunta"""
+    def buscar_codigo_relevante(self, user_id, pergunta, top_k=3):
         emb_query = self.gerar_embedding(pergunta)
         docs = list(self.code_col.find({"user_id": user_id}))
-
-        def similaridade(a, b):
-            if not a or not b: return 0
-            return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
-
+        def similaridade(a,b):
+            return sum(x*y for x,y in zip(a,b)) if a and b else 0
         docs.sort(key=lambda d: similaridade(emb_query, d.get("embedding", [])), reverse=True)
-        return docs[:top]
+        return docs[:top_k]
 
-    # ================= CONTEXTO INTELIGENTE =================
+    # ---------------- HISTÓRICO ----------------
     def montar_contexto(self, user_id, pergunta):
-        """Cria contexto combinando histórico + arquivos relevantes"""
-        historico = list(
-            self.chat_col.find({"user_id": user_id}).sort("timestamp", -1).limit(5)
-        )
+        historico = list(self.chat_col.find({"user_id": user_id}).sort("timestamp",-1).limit(5))
         contexto = ""
         for h in reversed(historico):
             contexto += f"Usuário: {h['msg']}\nIA: {h['resposta']}\n"
-
         arquivos = self.buscar_codigo_relevante(user_id, pergunta)
         for arq in arquivos:
             contexto += f"\nArquivo ({arq['nome']}):\n{arq['codigo']}\n"
-
         return contexto
 
-    # ================= CHAT =================
+    # ---------------- CHAT PRINCIPAL ----------------
     def perguntar(self, user_id, mensagem):
-        """Responde pergunta do usuário usando contexto e histórico"""
         if not self.client:
             return "⚠ IA não configurada."
 
         contexto = self.montar_contexto(user_id, mensagem)
-        prompt = f"{contexto}\nNova pergunta:\n{mensagem}"
+        prompt = f"""
+Você é uma IA especialista em LogicStart (Python em português).
+Objetivo:
+- Responda de forma clara, útil e direta.
+- Nunca repita literalmente a pergunta do usuário.
+- Use o contexto do histórico e dos arquivos relevantes do usuário.
+- Explique o raciocínio se gerar código.
+- Sempre entregue código funcional quando solicitado.
+- Se não souber a resposta, diga claramente e ofereça solução aproximada.
 
+Contexto do usuário:
+{contexto}
+
+Nova pergunta do usuário:
+{mensagem}
+
+Resposta da IA:
+"""
         resposta = self.client.chat.completions.create(
             model="gpt-4o-mini",
             messages=[
-                {"role": "system", "content": "Você é uma IA especialista em LogicStart (Python em português). Seja útil, preciso e não repita a pergunta do usuário."},
-                {"role": "user", "content": prompt}
-            ]
+                {"role":"system", "content":"Você é uma IA especialista em LogicStart."},
+                {"role":"user", "content": prompt}
+            ],
+            temperature=0.7
         ).choices[0].message.content
 
+        # Salva histórico
         self.chat_col.insert_one({
             "user_id": user_id,
             "msg": mensagem,
@@ -107,48 +98,36 @@ class IA:
 
         return resposta
 
-    # ================= FUNÇÕES DE CÓDIGO =================
+    # ---------------- FUNÇÕES AVANÇADAS ----------------
     def gerar(self, user_id, pedido):
-        return self.perguntar(user_id, f"Gere código LogicStart:\n{pedido}")
+        return self.perguntar(user_id, f"Gere código LogicStart: {pedido}")
 
     def corrigir(self, user_id, codigo):
-        self.salvar_codigo(user_id, "temp", codigo)
-        return self.perguntar(user_id, "Corrija este código e explique as alterações.")
+        self.salvar_codigo(user_id, "temp_corrigir", codigo)
+        return self.perguntar(user_id, "Corrija este código sem repetir o que está escrito e explique as mudanças:")
 
     def explicar(self, user_id, codigo):
-        self.salvar_codigo(user_id, "temp", codigo)
-        return self.perguntar(user_id, "Explique detalhadamente este código.")
+        self.salvar_codigo(user_id, "temp_explicar", codigo)
+        return self.perguntar(user_id, "Explique este código detalhadamente e de forma didática:")
 
-    # ================= AUTOCOMPLETE =================
+    def melhorar(self, user_id, codigo):
+        self.salvar_codigo(user_id, "temp_melhorar", codigo)
+        return self.perguntar(user_id, "Melhore este código tornando-o mais limpo, eficiente e comentado:")
+
+    # ---------------- AUTOCOMPLETE ----------------
     def sugerir(self, codigo):
-        comandos = [
-            "variavel","imprimir","se","senao","fim_se",
-            "repetir","fim_repetir","funcao","fim_funcao","retorna",
-            "enquanto","fim_enquanto","para","fim_para","classe","fim_classe"
-        ]
+        comandos = ["variavel","imprimir","se","senao","fim_se","repetir",
+                    "fim_repetir","funcao","fim_funcao","retorna","enquanto","fim_enquanto"]
         ultima = codigo.split("\n")[-1].strip()
         return [c for c in comandos if c.startswith(ultima)]
 
-    # ================= ANÁLISE DE CÓDIGO =================
+    # ---------------- ANÁLISE ----------------
     def analisar(self, codigo):
-        """Detecta erros básicos no código"""
         erros = []
         linhas = codigo.split("\n")
-        for i, l in enumerate(linhas, start=1):
-            if "@" in l:
-                erros.append(f"Linha {i}: caractere '@' inválido")
-            if "import os" in l or "import sys" in l:
-                erros.append(f"Linha {i}: uso de biblioteca proibida")
+        for i,l in enumerate(linhas):
+            if "imprimir" in l and "(" not in l:
+                erros.append(f"Linha {i+1}: função 'imprimir' possivelmente sem parênteses")
+            if "variavel" in l and "=" not in l:
+                erros.append(f"Linha {i+1}: declaração 'variavel' possivelmente sem valor")
         return erros
-
-    # ================= UTILIDADES =================
-    def listar_historico(self, user_id, limite=20):
-        """Retorna histórico recente"""
-        historico = list(
-            self.chat_col.find({"user_id": user_id}).sort("timestamp", -1).limit(limite)
-        )
-        return [{"mensagem": h["msg"], "resposta": h["resposta"]} for h in historico]
-
-    def deletar_historico(self, user_id):
-        """Deleta histórico do usuário"""
-        self.chat_col.delete_many({"user_id": user_id})
