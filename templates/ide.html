@@ -1,275 +1,251 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart IDE</title>
+# ide.py - LogicStart IDE Backend FINAL
 
-<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/material-darker.css" rel="stylesheet">
+from flask import Flask, request, jsonify
+from IA import IA
+from pymongo import MongoClient
+from datetime import datetime
+import os
 
-<style>
+app = Flask(__name__)
 
-/* ===== BASE ===== */
-body {
-    margin:0;
-    font-family: 'Segoe UI', sans-serif;
-    background:#0f172a;
-    color:#e2e8f0;
-    display:flex;
-    height:100vh;
-}
+# ================= CONFIG =================
 
-/* ===== SIDEBAR ===== */
-.sidebar {
-    width:220px;
-    background:#020617;
-    border-right:1px solid #1e293b;
-    display:flex;
-    flex-direction:column;
-}
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+API_KEY = os.getenv("OPENAI_API_KEY")
 
-.sidebar h2 {
-    padding:15px;
-    font-size:14px;
-    color:#38bdf8;
-}
+# ================= INIT =================
 
-.file {
-    padding:10px 15px;
-    cursor:pointer;
-    border-radius:8px;
-    margin:5px;
-    transition:.2s;
-}
+ia = IA(api_key=API_KEY)
 
-.file:hover {
-    background:#1e293b;
-}
+mongo = MongoClient(MONGO_URI)
+db = mongo["logicstart"]
 
-.file.active {
-    background:#38bdf8;
-    color:#000;
-}
+files_col = db["files"]
+logs_col = db["logs"]
 
-/* ===== MAIN ===== */
-.main {
-    flex:1;
-    display:flex;
-    flex-direction:column;
-}
+# ================= UTILS =================
 
-/* ===== TOPBAR ===== */
-.topbar {
-    display:flex;
-    justify-content:space-between;
-    align-items:center;
-    background:#020617;
-    padding:10px;
-    border-bottom:1px solid #1e293b;
-}
+def ok(data=None):
+    return jsonify({
+        "status": "ok",
+        "data": data
+    })
 
-.tabs {
-    display:flex;
-    gap:5px;
-}
+def erro(msg, code=400):
+    return jsonify({
+        "status": "erro",
+        "mensagem": msg
+    }), code
 
-.tab {
-    padding:8px 14px;
-    background:#1e293b;
-    border-radius:8px 8px 0 0;
-    cursor:pointer;
-}
+def log_event(user_id, acao, detalhe=""):
+    logs_col.insert_one({
+        "user_id": user_id,
+        "acao": acao,
+        "detalhe": detalhe,
+        "timestamp": datetime.utcnow()
+    })
 
-.tab.active {
-    background:#38bdf8;
-    color:black;
-}
+# ================= HEALTH =================
 
-/* ===== EDITOR ===== */
-.editor-container {
-    flex:1;
-}
+@app.route("/")
+def home():
+    return ok("🚀 LogicStart IDE ONLINE")
 
-.CodeMirror {
-    height:100%;
-    font-size:14px;
-}
+# ================= ARQUIVOS =================
 
-/* ===== TERMINAL ===== */
-.terminal {
-    height:180px;
-    background:#020617;
-    border-top:1px solid #1e293b;
-    padding:10px;
-    overflow:auto;
-    font-family:monospace;
-}
+@app.route("/files", methods=["GET"])
+def listar_arquivos():
+    user_id = request.args.get("user_id", "default")
 
-/* ===== BOTÕES ===== */
-.actions button {
-    margin-left:10px;
-    border:none;
-    background:#1e293b;
-    color:white;
-    padding:10px;
-    border-radius:50%;
-    cursor:pointer;
-    transition:.2s;
-}
+    arquivos = list(files_col.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ))
 
-.actions button:hover {
-    background:#38bdf8;
-    color:black;
-    transform:scale(1.1);
-}
+    return ok(arquivos)
 
-/* ===== RESPONSIVO ===== */
-@media(max-width:900px){
-    .sidebar{display:none;}
-}
 
-</style>
-</head>
+@app.route("/files", methods=["POST"])
+def salvar_arquivo():
+    data = request.json
 
-<body>
+    user_id = data.get("user_id", "default")
+    nome = data.get("nome")
+    codigo = data.get("codigo", "")
 
-<!-- SIDEBAR -->
-<div class="sidebar">
-    <h2>Arquivos</h2>
-    <div id="files"></div>
-</div>
+    if not nome:
+        return erro("Nome obrigatório")
 
-<!-- MAIN -->
-<div class="main">
+    files_col.update_one(
+        {"user_id": user_id, "nome": nome},
+        {
+            "$set": {
+                "codigo": codigo,
+                "updated_at": datetime.utcnow()
+            }
+        },
+        upsert=True
+    )
 
-    <!-- TOPBAR -->
-    <div class="topbar">
-        <div class="tabs" id="tabs"></div>
+    # 🔥 salva no cérebro da IA
+    ia.salvar_codigo(user_id, nome, codigo)
 
-        <div class="actions">
-            <button onclick="executarCodigo()">▶</button>
-            <button onclick="novoArquivo()">+</button>
-            <button onclick="salvar()">💾</button>
-        </div>
-    </div>
+    log_event(user_id, "salvar_arquivo", nome)
 
-    <!-- EDITOR -->
-    <div class="editor-container">
-        <textarea id="editor"></textarea>
-    </div>
+    return ok("Arquivo salvo")
 
-    <!-- TERMINAL -->
-    <div class="terminal" id="terminal"></div>
 
-</div>
+@app.route("/files/<nome>", methods=["GET"])
+def abrir_arquivo(nome):
+    user_id = request.args.get("user_id", "default")
 
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
+    arq = files_col.find_one(
+        {"user_id": user_id, "nome": nome},
+        {"_id": 0}
+    )
 
-<script>
+    if not arq:
+        return erro("Arquivo não encontrado", 404)
 
-/* ===== EDITOR ===== */
-let editor = CodeMirror.fromTextArea(document.getElementById("editor"),{
-    mode:"python",
-    theme:"material-darker",
-    lineNumbers:true
-});
+    return ok(arq)
 
-/* ===== ARQUIVOS ===== */
-let arquivos = JSON.parse(localStorage.getItem("arquivos")) || {
-    "main": 'variavel x = 5\nimprimir(x)'
-};
 
-let atual = "main";
+@app.route("/files/<nome>", methods=["DELETE"])
+def deletar_arquivo(nome):
+    user_id = request.args.get("user_id", "default")
 
-/* ===== UI ===== */
-function render(){
-    // files
-    let f = document.getElementById("files");
-    f.innerHTML="";
-    Object.keys(arquivos).forEach(nome=>{
-        let el=document.createElement("div");
-        el.className="file "+(nome===atual?"active":"");
-        el.innerText=nome+".ls";
-        el.onclick=()=>abrir(nome);
-        f.appendChild(el);
-    });
+    files_col.delete_one({
+        "user_id": user_id,
+        "nome": nome
+    })
 
-    // tabs
-    let t=document.getElementById("tabs");
-    t.innerHTML="";
-    Object.keys(arquivos).forEach(nome=>{
-        let el=document.createElement("div");
-        el.className="tab "+(nome===atual?"active":"");
-        el.innerText=nome;
-        el.onclick=()=>abrir(nome);
-        t.appendChild(el);
-    });
-}
+    log_event(user_id, "deletar_arquivo", nome)
 
-function abrir(nome){
-    atual=nome;
-    editor.setValue(arquivos[nome]);
-    render();
-}
+    return ok("Arquivo deletado")
 
-function salvar(){
-    arquivos[atual]=editor.getValue();
-    localStorage.setItem("arquivos",JSON.stringify(arquivos));
-    log("Salvo com sucesso","ok");
-}
+# ================= IA =================
 
-function novoArquivo(){
-    let nome=prompt("Nome:");
-    if(!nome)return;
-    arquivos[nome]="";
-    abrir(nome);
-}
+@app.route("/ia/chat", methods=["POST"])
+def chat():
+    data = request.json
 
-/* ===== TERMINAL ===== */
-function log(txt,type="info"){
-    let t=document.getElementById("terminal");
-    let d=document.createElement("div");
-    d.innerText=txt;
+    user_id = data.get("user_id", "default")
+    mensagem = data.get("mensagem", "")
 
-    if(type==="error") d.style.color="#ef4444";
-    if(type==="ok") d.style.color="#22c55e";
+    resposta = ia.perguntar(user_id, mensagem)
 
-    t.appendChild(d);
-    t.scrollTop=t.scrollHeight;
-}
+    log_event(user_id, "chat", mensagem)
 
-/* ===== EXECUÇÃO REAL ===== */
-async function executarCodigo(){
-    salvar();
-    log("Executando...");
+    return ok(resposta)
 
-    try{
-        let res = await fetch("http://localhost:5000/executar",{
-            method:"POST",
-            headers:{"Content-Type":"application/json"},
-            body:JSON.stringify({codigo:editor.getValue()})
-        });
 
-        let data = await res.json();
+@app.route("/ia/gerar", methods=["POST"])
+def gerar():
+    data = request.json
 
-        if(data.erro){
-            log(data.erro,"error");
-        }else{
-            log(data.saida.join("\n"),"ok");
-        }
+    user_id = data.get("user_id", "default")
+    pedido = data.get("pedido", "")
 
-    }catch{
-        log("Erro ao conectar com engine","error");
-    }
-}
+    codigo = ia.gerar(user_id, pedido)
 
-/* ===== INIT ===== */
-render();
-abrir(atual);
+    log_event(user_id, "gerar_codigo", pedido)
 
-</script>
+    return ok(codigo)
 
-</body>
-</html>
+
+@app.route("/ia/corrigir", methods=["POST"])
+def corrigir():
+    data = request.json
+
+    user_id = data.get("user_id", "default")
+    codigo = data.get("codigo", "")
+
+    novo = ia.corrigir(user_id, codigo)
+
+    log_event(user_id, "corrigir_codigo")
+
+    return ok(novo)
+
+
+@app.route("/ia/explicar", methods=["POST"])
+def explicar():
+    data = request.json
+
+    user_id = data.get("user_id", "default")
+    codigo = data.get("codigo", "")
+
+    texto = ia.explicar(user_id, codigo)
+
+    return ok(texto)
+
+
+@app.route("/ia/sugerir", methods=["POST"])
+def sugerir():
+    data = request.json
+
+    codigo = data.get("codigo", "")
+    sugestoes = ia.sugerir(codigo)
+
+    return ok(sugestoes)
+
+
+@app.route("/ia/analisar", methods=["POST"])
+def analisar():
+    data = request.json
+
+    codigo = data.get("codigo", "")
+    erros = ia.analisar(codigo)
+
+    return ok(erros)
+
+# ================= EXECUÇÃO =================
+
+@app.route("/executar", methods=["POST"])
+def executar():
+    data = request.json
+
+    codigo = data.get("codigo", "")
+    user_id = data.get("user_id", "default")
+
+    try:
+        from engine import Engine
+
+        engine = Engine(codigo)
+        engine.executar()
+
+        log_event(user_id, "executar_codigo")
+
+        return ok({
+            "saida": engine.saida
+        })
+
+    except Exception as e:
+        return erro(str(e), 500)
+
+# ================= LOGS =================
+
+@app.route("/logs", methods=["GET"])
+def logs():
+    user_id = request.args.get("user_id", "default")
+
+    registros = list(
+        logs_col.find({"user_id": user_id}, {"_id": 0})
+        .sort("timestamp", -1)
+        .limit(50)
+    )
+
+    return ok(registros)
+
+# ================= SEGURANÇA BÁSICA =================
+
+@app.before_request
+def validar_json():
+    if request.method == "POST":
+        if not request.is_json:
+            return erro("Requisição deve ser JSON", 415)
+
+# ================= RUN =================
+
+if __name__ == "__main__":
+    print("🚀 LogicStart IDE rodando em produção...")
+    app.run(host="0.0.0.0", port=5000)
