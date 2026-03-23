@@ -5,147 +5,237 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LogicStart Elite</title>
 
-<!-- CodeMirror 6 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/javascript/javascript.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css">
 
 <style>
-body { margin:0; font-family:'Segoe UI', sans-serif; background:#181818; color:#e0e0e0; }
-#login-canto {
-    position:absolute; top:20px; right:20px; background:#222; padding:15px; border-radius:8px; width:220px;
-    box-shadow:0 0 10px #000;
+:root{
+--bg:#0f0f1a; --bg2:#1a1a2e; --bg3:#23233a;
+--primary:#6e6ef8; --text:#f1f1f1;
+--success:#4caf50; --error:#ff5c5c; --info:#00bcd4;
 }
-#login-canto h3{ margin:0 0 10px 0; font-size:1em; }
-#login-canto .input-field{ width:100%; padding:8px; margin:5px 0; border-radius:5px; border:1px solid #555; background:#1e1e1e; color:#e0e0e0; }
-#login-canto .btn{ width:100%; background:#3a78d7; color:white; border:none; padding:10px; cursor:pointer; border-radius:5px; margin-top:5px; }
-#login-canto .btn:hover{ background:#2b5ea0; }
-#login-canto .oauth-btn{ background:#ff5555; }
-#login-canto .oauth-btn:hover{ background:#cc4444; }
 
-#ide-container { padding:20px; display:flex; flex-direction:column; max-width:1200px; margin:auto; }
-.controls{ margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
-.controls .btn{ flex:1; min-width:100px; }
-#saida{ margin-top:15px; background:#111; padding:10px; border-radius:5px; min-height:150px; white-space:pre-wrap; font-family:monospace; }
-.cm-editor{ height:400px; border-radius:5px; }
+body{margin:0;height:100vh;display:flex;flex-direction:column;background:var(--bg);color:var(--text);font-family:'Segoe UI';}
+
+/* HEADER */
+header{display:flex;justify-content:space-between;padding:10px;background:var(--bg2);border-bottom:2px solid var(--primary);}
+.btn{background:var(--primary);border:none;padding:8px;color:white;border-radius:6px;cursor:pointer}
+
+/* MAIN */
+.main{flex:1;display:flex;overflow:hidden}
+
+/* SIDEBAR */
+.sidebar{width:230px;background:var(--bg2);border-right:2px solid var(--primary);overflow:auto}
+.file{padding:8px;margin:4px;border-radius:6px;background:var(--bg3);cursor:pointer}
+.file.active{background:var(--primary)}
+
+/* EDITOR */
+.editor{flex:2;display:flex;flex-direction:column}
+.tabs{display:flex;background:var(--bg3);overflow-x:auto}
+.tab{padding:10px;cursor:pointer}
+.tab.active{background:var(--primary)}
+.modified::after{content:" ●";color:#ff9800}
+
+.CodeMirror{flex:1}
+
+/* TERMINAL */
+.terminal{height:150px;background:black;padding:10px;overflow:auto;font-family:monospace}
+.success{color:var(--success)} .error{color:var(--error)} .info{color:var(--info)}
+
+/* IA */
+.ai{width:320px;background:var(--bg2);border-left:2px solid var(--primary);display:flex;flex-direction:column}
+.chat{flex:1;overflow:auto;padding:10px}
+.msg{margin-bottom:10px}
+.user{color:#8be9fd} .bot{color:#50fa7b}
+
+textarea{margin:10px;background:var(--bg3);color:white;border:none;padding:10px;border-radius:6px}
+
+/* STATUS */
+.status{height:25px;background:var(--bg3);display:flex;justify-content:space-between;padding:5px;font-size:12px}
 </style>
 </head>
+
 <body>
 
-<div id="login-canto">
-    <h3>Login (opcional)</h3>
-    <input class="input-field" type="email" placeholder="Email" id="email">
-    <input class="input-field" type="password" placeholder="Senha" id="senha">
-    <button class="btn" onclick="loginEmail()">Entrar</button>
-    <button class="btn oauth-btn" onclick="loginGoogle()">Google</button>
+<header>
+<div>🚀 LogicStart Elite</div>
+<div>
+<button class="btn" onclick="executar()">▶</button>
+<button class="btn" onclick="salvar()">💾</button>
+<button class="btn" onclick="novoArquivo()">📄</button>
+</div>
+</header>
+
+<div class="main">
+
+<div class="sidebar" id="files"></div>
+
+<div class="editor">
+<div class="tabs" id="tabs"></div>
+<textarea id="editor"></textarea>
+<div class="terminal" id="terminal"></div>
 </div>
 
-<div id="ide-container">
-    <textarea id="codigo"></textarea>
-    <div class="controls">
-        <button class="btn" onclick="executar()">Executar</button>
-        <button class="btn" onclick="salvar()">Salvar</button>
-        <button class="btn" onclick="verHistorico()">Histórico</button>
-        <button class="btn" onclick="logout()">Logout</button>
-    </div>
-    <div id="saida"></div>
+<div class="ai">
+<div class="chat" id="chat"></div>
+<textarea id="prompt" placeholder="Perguntar para IA..."></textarea>
+<button class="btn" onclick="chatIA()">Enviar</button>
 </div>
+
+</div>
+
+<div class="status">
+<span id="status">Pronto</span>
+<span>LogicStart</span>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
 
 <script>
-let editor = CodeMirror.fromTextArea(document.getElementById("codigo"), {
-    mode: "javascript",
-    theme: "monokai",
-    lineNumbers: true,
-    autoCloseBrackets: true,
-    matchBrackets: true,
-    indentUnit: 4,
-    tabSize: 4,
-    styleActiveLine: true,
-    extraKeys: {"Ctrl-Space":"autocomplete"}
+const user_id="felipe";
+
+let editor=CodeMirror.fromTextArea(document.getElementById("editor"),{
+ mode:"python",theme:"dracula",lineNumbers:true
 });
 
-// Palavras-chave portugues + JS
-const palavrasChave = [
-    "inicio", "fim", "enquanto", "se", "senao", "para", "funcao",
-    "var", "let", "const", "function", "return", "if", "else", "for", "while", "console.log"
-];
+let arquivos={}, atual="main", modificados={};
+let chatHist=[];
 
-function autocomplete(cm) {
-    const cur = cm.getCursor();
-    const token = cm.getTokenAt(cur);
-    const start = token.start;
-    const end = cur.ch;
-    const word = token.string;
-    const list = palavrasChave.filter(w => w.startsWith(word));
-    return {list: list.length? list: palavrasChave, from: CodeMirror.Pos(cur.line, start), to: CodeMirror.Pos(cur.line, end)};
+/* STATUS */
+function status(s){document.getElementById("status").innerText=s}
+
+/* LOG */
+function log(msg,type="info"){
+ let t=document.getElementById("terminal");
+ let d=document.createElement("div");
+ d.className=type;
+ d.innerText=msg;
+ t.appendChild(d);
+ t.scrollTop=t.scrollHeight;
 }
 
-editor.on("inputRead", function(cm, change) {
-    if(change.text[0].match(/[\w]/)) cm.showHint({hint: autocomplete});
+/* FILES */
+async function carregar(){
+ let r=await fetch(`/files?user_id=${user_id}`);
+ let d=await r.json();
+ arquivos={};
+ d.data.forEach(f=>arquivos[f.nome]=f.codigo);
+ if(!arquivos["main"]) arquivos["main"]="";
+ abrir("main");
+ render();
+}
+
+function render(){
+ let f=document.getElementById("files");
+ let t=document.getElementById("tabs");
+ f.innerHTML=""; t.innerHTML="";
+ Object.keys(arquivos).forEach(n=>{
+  let el=document.createElement("div");
+  el.className="file "+(n===atual?"active":"");
+  el.innerText=n;
+  el.onclick=()=>abrir(n);
+  f.appendChild(el);
+
+  let tab=document.createElement("div");
+  tab.className="tab "+(n===atual?"active":"")+(modificados[n]?" modified":"");
+  tab.innerText=n;
+  tab.onclick=()=>abrir(n);
+  t.appendChild(tab);
+ });
+}
+
+function abrir(n){
+ atual=n;
+ editor.setValue(arquivos[n]);
+ render();
+}
+
+function novoArquivo(){
+ let n=prompt("Nome do arquivo:");
+ if(!n)return;
+ arquivos[n]="";
+ abrir(n);
+}
+
+/* DETECTAR MUDANÇA */
+editor.on("change",()=>{
+ modificados[atual]=true;
+ arquivos[atual]=editor.getValue();
+ render();
+ autoSave();
 });
 
-// -------------------
-// Funções front-end
-// -------------------
-function loginEmail() {
-    const email = document.getElementById("email").value;
-    const senha = document.getElementById("senha").value;
-    if(!email || !senha){ alert("Preencha todos os campos!"); return; }
-    fetch("/login/email",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({email, senha})
-    }).then(res=>res.json()).then(data=>{
-        alert(data.success ? "Login feito com sucesso!" : data.error);
-    });
+/* AUTOSAVE */
+let timeout;
+function autoSave(){
+ clearTimeout(timeout);
+ timeout=setTimeout(()=>salvar(),2000);
 }
 
-function loginGoogle() {
-    fetch("/login/google").then(res=>res.json()).then(data=>{
-        alert(data.success ? "Login Google feito com sucesso!" : "Falha no login Google");
-    });
+/* SAVE */
+async function salvar(){
+ status("Salvando...");
+ await fetch("/files",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({user_id,nome:atual,codigo:editor.getValue()})
+ });
+ modificados[atual]=false;
+ render();
+ status("Salvo");
 }
 
-function executar(){
-    const codigo = editor.getValue();
-    fetch("/run",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({code: codigo})
-    }).then(res=>res.json()).then(data=>{
-        document.getElementById("saida").textContent = data.success ? data.result : data.error;
-    });
+/* RUN */
+async function executar(){
+ status("Executando...");
+ let r=await fetch("/executar",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({codigo:editor.getValue()})
+ });
+ let d=await r.json();
+ log(d.data?.saida||d.mensagem,d.status==="ok"?"success":"error");
+ status("Finalizado");
 }
 
-function salvar(){
-    const codigo = editor.getValue();
-    const email = prompt("Digite seu e-mail para salvar:");
-    if(!email) return;
-    fetch("/save",{
-        method:"POST",
-        headers:{"Content-Type":"application/json"},
-        body: JSON.stringify({code: codigo, email})
-    }).then(res=>res.json()).then(data=>{
-        alert(data.success ? "Código salvo!" : data.error);
-    });
+/* IA */
+function addMsg(txt,cls){
+ let c=document.getElementById("chat");
+ let d=document.createElement("div");
+ d.className="msg "+cls;
+ d.innerText=txt;
+ c.appendChild(d);
+ c.scrollTop=c.scrollHeight;
 }
 
-function verHistorico(){
-    const email = prompt("Digite seu e-mail para ver histórico:");
-    if(!email) return;
-    fetch(`/history/${email}`).then(res=>res.json()).then(data=>{
-        if(!data.length){ alert("Nenhum código salvo!"); return; }
-        let output = "Histórico:\n\n";
-        data.forEach((item,i)=> output += `${i+1} - ${new Date(item.timestamp*1000).toLocaleString()}\n${item.codigo}\n\n`);
-        document.getElementById("saida").textContent = output;
-    });
+async function chatIA(){
+ let p=document.getElementById("prompt").value;
+ if(!p)return;
+
+ chatHist.push({role:"user",content:p});
+ addMsg("Você: "+p,"user");
+
+ let r=await fetch("/ia/chat",{
+  method:"POST",
+  headers:{"Content-Type":"application/json"},
+  body:JSON.stringify({user_id,mensagem:p,historico:chatHist})
+ });
+
+ let d=await r.json();
+ chatHist.push({role:"bot",content:d.data});
+
+ addMsg("IA: "+d.data,"bot");
 }
 
-function logout(){
-    fetch("/logout").then(()=>alert("Logout efetuado!"));
-}
+/* SHORTCUTS */
+document.addEventListener("keydown",(e)=>{
+ if(e.ctrlKey && e.key==="s"){e.preventDefault();salvar();}
+ if(e.ctrlKey && e.key==="Enter"){executar();}
+});
+
+/* INIT */
+carregar();
 </script>
 
 </body>
