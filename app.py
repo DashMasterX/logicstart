@@ -1,174 +1,178 @@
+# app.py - LogicStart Elite IDE FINAL
+
 from flask import Flask, request, jsonify, render_template, redirect, session
-from functools import wraps
-import os, json, hashlib, time
-from collections import defaultdict
+from pymongo import MongoClient
+from datetime import datetime
+import os, hashlib, json
 
-from parser_novo import ParserNovo
-from executor_nodes import ExecutorNodes
-
-# =========================
-# CONFIG
-# =========================
+# ================= CONFIG =================
 app = Flask(__name__)
+app.secret_key = os.getenv("SECRET_KEY", "ultra-secret")
 
-app.secret_key = "super-secret-key-fixa"
+MONGO_URI = os.getenv("MONGO_URI", "mongodb://localhost:27017/")
+OPENAI_KEY = os.getenv("OPENAI_API_KEY")
 
-app.config["SESSION_COOKIE_SECURE"] = False
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+mongo = MongoClient(MONGO_URI)
+db = mongo["logicstart"]
+files_col = db["files"]
+logs_col = db["logs"]
 
-USERS_FILE = "users.json"
-RATE_LIMIT = defaultdict(list)
+# ================= UTILS =================
+def user_id():
+    return session.get("user_id", "guest")
 
-# =========================
-# UTILS
-# =========================
-def now():
-    return int(time.time())
+def ok(data=None):
+    return jsonify({"status":"ok","data":data})
 
-def hash_password(p):
-    return hashlib.sha256(p.encode()).hexdigest()
+def erro(msg, code=400):
+    return jsonify({"status":"erro","mensagem":msg}), code
 
-def user():
-    return session.get("user")
+def log_event(acao, detalhe=""):
+    logs_col.insert_one({
+        "user_id": user_id(),
+        "acao": acao,
+        "detalhe": detalhe,
+        "timestamp": datetime.utcnow()
+    })
 
-def load_users():
-    if not os.path.exists(USERS_FILE):
-        return {}
-    return json.load(open(USERS_FILE))
-
-def save_users(data):
-    json.dump(data, open(USERS_FILE, "w"), indent=2)
-
-# =========================
-# SEGURANÇA
-# =========================
-def rate_limit():
-    ip = request.remote_addr or "unknown"
-    t = now()
-
-    RATE_LIMIT[ip] = [x for x in RATE_LIMIT[ip] if t - x < 10]
-
-    if len(RATE_LIMIT[ip]) > 30:
-        return False
-
-    RATE_LIMIT[ip].append(t)
-    return True
-
-def login_required(f):
-    @wraps(f)
-    def wrapper(*args, **kwargs):
-        if not user():
-            return redirect("/login")
-        if not rate_limit():
-            return "Muitas requisições", 429
-        return f(*args, **kwargs)
-    return wrapper
-
-def sanitize(code):
-    proibido = ["import os","import sys","__","eval(","exec("]
-    for p in proibido:
-        if p in code:
-            raise Exception(f"Bloqueado: {p}")
-    return code
-
-# =========================
-# ROTAS WEB (ALINHADAS COM SEUS HTML)
-# =========================
-
-# INDEX (sua página inicial)
-@app.route("/")
-def index():
-    return render_template("index.html")
-
-# LOGIN
+# ================= LOGIN =================
 @app.route("/login", methods=["GET","POST"])
 def login():
     if request.method == "POST":
-        email = request.form.get("email","").strip()
-        senha = request.form.get("senha","").strip()
-
-        users = load_users()
-
-        if email in users and users[email]["password"] == hash_password(senha):
-            session["user"] = email
+        email = request.form.get("email","")
+        senha = request.form.get("senha","")
+        # login simples de demo
+        if (email=="admin" and senha=="1234") or (email=="" and senha==""):
+            session["user_id"] = email or "guest"
+            log_event("login", email)
             return redirect("/ide")
+        return render_template("login.html", error="Usuário ou senha inválidos")
+    return render_template("login.html", error="")
 
-        return render_template("login.html", erro="Login inválido")
-
-    return render_template("login.html")
-
-# REGISTRO
-@app.route("/register", methods=["POST"])
-def register():
-    email = request.form.get("email","").strip()
-    senha = request.form.get("senha","").strip()
-
-    users = load_users()
-
-    if email in users:
-        return render_template("login.html", erro="Usuário já existe")
-
-    users[email] = {
-        "password": hash_password(senha),
-        "created": now()
-    }
-
-    save_users(users)
-
-    return redirect("/login")
-
-# LOGOUT
 @app.route("/logout")
 def logout():
+    log_event("logout")
     session.clear()
-    return redirect("/")
+    return redirect("/login")
 
-# IDE (SUA PÁGINA ide.html)
+# ================= IDE =================
 @app.route("/ide")
-@login_required
 def ide():
-    return render_template("ide.html", user=user())
+    if "user_id" not in session:
+        return redirect("/login")
+    return render_template("ide.html")
 
-# =========================
-# EXECUÇÃO (LIGA COM IDE)
-# =========================
-@app.route("/run", methods=["POST"])
-@login_required
-def run():
+# ================= ARQUIVOS =================
+@app.route("/files", methods=["GET"])
+def listar_arquivos():
+    arquivos = list(files_col.find({"user_id": user_id()}, {"_id":0}))
+    return ok(arquivos)
+
+@app.route("/files", methods=["POST"])
+def salvar_arquivo():
+    data = request.get_json()
+    nome = data.get("nome")
+    codigo = data.get("codigo","")
+    if not nome: return erro("Nome do arquivo obrigatório")
+    files_col.update_one(
+        {"user_id": user_id(), "nome": nome},
+        {"$set":{"codigo":codigo,"updated_at":datetime.utcnow()}},
+        upsert=True
+    )
+    log_event("salvar_arquivo", nome)
+    return ok(f"Arquivo '{nome}' salvo!")
+
+@app.route("/files/<nome>", methods=["GET"])
+def abrir_arquivo(nome):
+    arq = files_col.find_one({"user_id": user_id(), "nome": nome}, {"_id":0})
+    if not arq: return erro("Arquivo não encontrado", 404)
+    return ok(arq)
+
+@app.route("/files/<nome>", methods=["DELETE"])
+def deletar_arquivo(nome):
+    files_col.delete_one({"user_id": user_id(), "nome": nome})
+    log_event("deletar_arquivo", nome)
+    return ok(f"Arquivo '{nome}' deletado")
+
+# ================= EXECUÇÃO =================
+@app.route("/executar", methods=["POST"])
+def executar():
+    data = request.get_json()
+    codigo = data.get("codigo","")
     try:
-        data = request.get_json()
-        code = sanitize(data.get("code",""))
-
-        parser = ParserNovo(code)
+        from executor_nodes import ExecutorNodes
+        from parser_novo import ParserNovo
+        parser = ParserNovo(codigo)
         nodes = parser.parse()
-
         executor = ExecutorNodes(nodes)
-        result = executor.executar()
-
-        return jsonify({
-            "ok": True,
-            "result": result
-        })
-
+        resultado = executor.executar()
+        log_event("executar_codigo")
+        return ok({"saida":resultado})
     except Exception as e:
-        return jsonify({
-            "ok": False,
-            "error": str(e)
-        })
+        log_event("erro_execucao", str(e))
+        return erro(str(e), 500)
 
-# =========================
-# STATUS (DEBUG)
-# =========================
-@app.route("/status")
-def status():
-    return jsonify({
-        "logado": bool(user()),
-        "user": user()
-    })
+# ================= IA =================
+@app.route("/ia/chat", methods=["POST"])
+def ia_chat():
+    data = request.get_json()
+    mensagem = data.get("mensagem","")
+    try:
+        from IA import IA
+        ia = IA(api_key=OPENAI_KEY)
+        resposta = ia.perguntar(user_id(), mensagem)
+        log_event("ia_chat", mensagem)
+        return ok(resposta)
+    except Exception as e:
+        return erro(f"Erro IA: {e}", 500)
 
-# =========================
-# START
-# =========================
+@app.route("/ia/gerar", methods=["POST"])
+def ia_gerar():
+    data = request.get_json()
+    pedido = data.get("pedido","")
+    try:
+        from IA import IA
+        ia = IA(api_key=OPENAI_KEY)
+        codigo = ia.gerar(user_id(), pedido)
+        log_event("ia_gerar", pedido)
+        return ok(codigo)
+    except Exception as e:
+        return erro(f"Erro IA: {e}", 500)
+
+@app.route("/ia/corrigir", methods=["POST"])
+def ia_corrigir():
+    data = request.get_json()
+    codigo = data.get("codigo","")
+    try:
+        from IA import IA
+        ia = IA(api_key=OPENAI_KEY)
+        novo = ia.corrigir(user_id(), codigo)
+        log_event("ia_corrigir")
+        return ok(novo)
+    except Exception as e:
+        return erro(f"Erro IA: {e}", 500)
+
+@app.route("/ia/explicar", methods=["POST"])
+def ia_explica():
+    data = request.get_json()
+    codigo = data.get("codigo","")
+    try:
+        from IA import IA
+        ia = IA(api_key=OPENAI_KEY)
+        texto = ia.explicar(user_id(), codigo)
+        log_event("ia_explicar")
+        return ok(texto)
+    except Exception as e:
+        return erro(f"Erro IA: {e}", 500)
+
+# ================= LOGS =================
+@app.route("/logs", methods=["GET"])
+def logs():
+    registros = list(logs_col.find({"user_id": user_id()}, {"_id":0}).sort("timestamp",-1).limit(50))
+    return ok(registros)
+
+# ================= RUN =================
 if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 80))
+    port = int(os.environ.get("PORT", 5000))
+    print(f"🚀 LogicStart Elite IDE rodando na porta {port}")
     app.run(host="0.0.0.0", port=port)
