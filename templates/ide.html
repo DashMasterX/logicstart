@@ -3,119 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite IDE - Ultra</title>
+<title>LogicStart Elite IDE</title>
 
-<!-- CodeMirror -->
-<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css" rel="stylesheet">
-<link href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css" rel="stylesheet">
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/addon/hint/show-hint.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/addon/hint/show-hint.css">
+<!-- CodeMirror 6 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/javascript/javascript.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
 
 <style>
-body {margin:0;font-family:'Consolas',monospace;background:#1b1b2f;color:#f8f8f2;display:flex;flex-direction:column;min-height:100vh;}
-header {display:flex;justify-content:space-between;align-items:center;padding:12px 20px;background:#2c2c4a;border-bottom:2px solid #6e6ef8;box-shadow:0 2px 6px rgba(0,0,0,0.5);}
-header .titulo {font-size:1.5em;font-weight:bold;}
-.main-container {flex:1;display:flex;overflow:hidden;}
-#file-panel {width:220px;background:#24245b;border-right:2px solid #6e6ef8;display:flex;flex-direction:column;}
-#file-panel h3 {margin:12px;font-size:1.1em;font-weight:bold;color:#a0a0ff;}
-.file-list {flex:1;overflow-y:auto;padding:0 10px;}
-.file-list div {padding:10px;margin-bottom:6px;background:#32326c;border-radius:10px;cursor:pointer;transition:0.2s;}
-.file-list div.active, .file-list div:hover {background:#6e6ef8;color:#fff;font-weight:bold;}
-#editor-area {flex:2;display:flex;flex-direction:column;}
-.tab-bar {display:flex;background:#32326c;border-bottom:2px solid #6e6ef8;}
-.tab-bar .tab {padding:10px 16px;cursor:pointer;color:#f8f8f2;transition:0.2s;}
-.tab-bar .tab.active {background:#6e6ef8;color:#fff;font-weight:bold;border-radius:8px 8px 0 0;}
-.CodeMirror {flex:1;height:100%;border-radius:10px 10px 0 0;font-size:14px;border:2px solid #6e6ef8;}
-#terminal {flex:1;background:#1b1b3b;padding:12px;overflow-y:auto;font-family:monospace;font-size:14px;border-top:2px solid #6e6ef8;border-radius:0 0 10px 10px;}
-.terminal .info {color:#8be9fd;}
-.terminal .success {color:#a0a0ff;}
-.terminal .debug {color:#f1fa8c;}
-.terminal .error {color:#ff6b6b;}
-.float-buttons {position:fixed;bottom:30px;right:30px;display:flex;flex-direction:column;gap:18px;}
-.float-buttons button {background:#6e6ef8;border:none;color:#fff;padding:14px 28px;border-radius:50px;cursor:pointer;font-weight:bold;position:relative;overflow:hidden;transition:transform 0.2s ease, box-shadow 0.3s ease;}
-.float-buttons button:hover {transform:scale(1.15);box-shadow:0 6px 22px rgba(110,110,248,0.5);}
-.float-buttons button::after {content:"";position:absolute;width:100px;height:100px;background:rgba(255,255,255,0.15);border-radius:50%;top:50%;left:50%;transform:translate(-50%,-50%) scale(0);transition:transform 0.5s ease, opacity 0.5s ease;}
-.float-buttons button:active::after {transform:translate(-50%,-50%) scale(3);opacity:0;}
-@media (max-width:1024px){.main-container{flex-direction:column;} #file-panel{width:100%;height:150px;flex-direction:row;overflow-x:auto;} .CodeMirror{height:300px;} #terminal{height:200px;}}
+body {
+    margin:0;
+    font-family:'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0f0f0f, #1c1c1c);
+    color:#e0e0e0;
+}
+#ide-container {
+    max-width: 1200px;
+    margin: 20px auto;
+    padding: 20px;
+}
+.cm-editor { height: 400px; border-radius: 8px; }
+.controls { margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }
+.controls .btn { flex:1; min-width:120px; padding:10px; border:none; border-radius:8px; cursor:pointer; transition:0.2s; }
+.controls .btn:hover { opacity:0.85; }
+.btn-run { background:#3a78d7; color:#fff; }
+.btn-save { background:#28a745; color:#fff; }
+.btn-history { background:#ffc107; color:#000; }
+.btn-logout { background:#dc3545; color:#fff; }
+#saida {
+    margin-top:15px;
+    background:#111;
+    padding:15px;
+    border-radius:8px;
+    min-height:200px;
+    font-family:monospace;
+    white-space:pre-wrap;
+    overflow-y:auto;
+}
+.ia-panel { margin-top:20px; background:#202020; padding:15px; border-radius:8px; }
+.ia-panel h3 { margin:0 0 10px 0; font-size:16px; }
+.ia-panel textarea { width:100%; height:60px; background:#121212; color:#fff; border:none; border-radius:5px; padding:8px; margin-bottom:10px; font-family:monospace; }
+.ia-panel button { padding:8px 12px; border:none; border-radius:5px; cursor:pointer; background:#3a78d7; color:#fff; transition:0.2s; margin-right:5px; }
+.ia-panel button:hover { opacity:0.85; }
 </style>
 </head>
 <body>
 
-<header>
-<div class="titulo">LogicStart Elite IDE Ultra</div>
-</header>
+<div id="ide-container">
+    <textarea id="codigo">// Escreva seu código LogicStart aqui</textarea>
 
-<div class="main-container">
-<div id="file-panel">
-<h3>Arquivos</h3>
-<div class="file-list" id="file-list"></div>
-</div>
+    <div class="controls">
+        <button class="btn btn-run" onclick="executar()">Executar</button>
+        <button class="btn btn-save" onclick="salvar()">Salvar</button>
+        <button class="btn btn-history" onclick="verHistorico()">Histórico</button>
+        <button class="btn btn-logout" onclick="logout()">Logout</button>
+    </div>
 
-<div id="editor-area">
-<div class="tab-bar" id="tab-bar"></div>
-<textarea id="editor"></textarea>
-<div id="terminal" class="terminal"></div>
-</div>
-</div>
+    <div id="saida">Saída do programa aparecerá aqui...</div>
 
-<div class="float-buttons">
-<button onclick="executarCodigo()">▶ Run</button>
-<button onclick="salvarCodigo()">💾 Save</button>
-<button onclick="abrirIA()">🤖 Chat IA</button>
-<button onclick="gerarCodigoIA()">🧠 Gerar Código IA</button>
+    <div class="ia-panel">
+        <h3>Assistente IA</h3>
+        <textarea id="ia-prompt" placeholder="Pergunte algo à IA ou peça código..."></textarea>
+        <button onclick="iaChat()">💬 Chat</button>
+        <button onclick="iaGerar()">📝 Gerar Código</button>
+        <button onclick="iaExplicar()">📖 Explicar Código</button>
+        <button onclick="iaCorrigir()">🛠 Corrigir Código</button>
+        <div id="ia-resposta" style="margin-top:10px; white-space:pre-wrap; font-family:monospace;"></div>
+    </div>
 </div>
 
 <script>
-/* ===== Editor ===== */
-let editor = CodeMirror.fromTextArea(document.getElementById("editor"), {
-mode: "python",
-theme: "dracula",
-lineNumbers:true,
-lineWrapping:true,
-indentUnit:4,
-tabSize:4,
-extraKeys: {"Ctrl-Space":"autocomplete"}
+let editor = CodeMirror.fromTextArea(document.getElementById("codigo"), {
+    mode: "javascript",
+    theme: "monokai",
+    lineNumbers: true,
+    autoCloseBrackets: true,
+    matchBrackets: true,
+    indentUnit: 4,
+    tabSize: 4,
+    styleActiveLine: true
 });
 
-/* ===== Autocomplete LogicStart ===== */
-const keywords = ["inicio","fim","se","senao","enquanto","para","funcao","var","let","const","retorna","print","console.log"];
-editor.on("inputRead", function(cm, change){
-let cur = cm.getCursor();
-let token = cm.getTokenAt(cur);
-let start = token.start;
-let end = cur.ch;
-let word = token.string;
-let list = keywords.filter(w=>w.startsWith(word));
-if(list.length>0) cm.showHint({hint: function(){return {list:list, from:CodeMirror.Pos(cur.line,start),to:CodeMirror.Pos(cur.line,end)}}});
-});
+// -------- FUNÇÕES IDE --------
+function executar(){
+    fetch("/executar", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({codigo: editor.getValue(), user_id:"default"})
+    })
+    .then(r=>r.json()).then(d=>{
+        document.getElementById("saida").textContent = d.status==="ok" ? d.data.saida : "Erro: "+d.mensagem;
+    });
+}
 
-/* ===== Arquivos ===== */
-let arquivos = {};
-let arquivoAtivo = null;
-function atualizarAbas(){const tabBar=document.getElementById("tab-bar");tabBar.innerHTML="";Object.keys(arquivos).forEach(nome=>{let div=document.createElement("div");div.textContent=nome;div.className=(nome===arquivoAtivo)?"tab active":"tab";div.onclick=()=>abrirArquivo(nome);tabBar.appendChild(div);});}
-function atualizarListaArquivos(){const lista=document.getElementById("file-list");lista.innerHTML="";Object.keys(arquivos).forEach(nome=>{let div=document.createElement("div");div.textContent=nome;div.className=(nome===arquivoAtivo)?"active":"";div.onclick=()=>abrirArquivo(nome);lista.appendChild(div);});}
-function abrirArquivo(nome){if(!arquivos[nome]) return logTerminal(`Arquivo '${nome}' não encontrado`,"error");arquivoAtivo=nome;editor.setValue(arquivos[nome]);atualizarAbas();atualizarListaArquivos();}
-function salvarArquivoLocal(){if(!arquivoAtivo) return;arquivos[arquivoAtivo]=editor.getValue();}
+function salvar(){
+    fetch("/files", {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({codigo: editor.getValue(), nome:"main", user_id:"default"})
+    })
+    .then(r=>r.json()).then(d=>{
+        alert(d.status==="ok" ? "Arquivo salvo!" : "Erro ao salvar");
+    });
+}
 
-/* ===== Terminal ===== */
-let terminal = document.getElementById("terminal");
-function logTerminal(texto,tipo="info"){let div=document.createElement("div");div.className=tipo;div.innerHTML=texto.replace(/\n/g,"<br>");terminal.appendChild(div);terminal.scrollTop=terminal.scrollHeight;}
-function limparTerminal(){terminal.innerHTML="";}
+function verHistorico(){
+    fetch("/history")
+    .then(r=>r.json()).then(d=>{
+        if(!d.length){ alert("Nenhum histórico"); return; }
+        let txt = d.map((l,i)=>`${i+1} - ${l}`).join("\n");
+        document.getElementById("saida").textContent = txt;
+    });
+}
 
-/* ===== Operações ===== */
-function executarCodigo(){salvarArquivoLocal();let codigo=editor.getValue();logTerminal("> Executando...","info");fetch("/executar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({codigo:codigo,user_id:"default"})}).then(res=>res.json()).then(d=>{if(d.status==="ok")logTerminal(d.data.saida,"success");else logTerminal(d.mensagem,"error");});}
+function logout(){ window.location.href="/logout"; }
 
-function salvarCodigo(){salvarArquivoLocal();if(!arquivoAtivo) arquivoAtivo=prompt("Nome do arquivo:");if(!arquivoAtivo)return;fetch("/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:"default",nome:arquivoAtivo,codigo:editor.getValue()})}).then(res=>res.json()).then(d=>{if(d.status==="ok")logTerminal(`Arquivo '${arquivoAtivo}' salvo!`,"success");else logTerminal(d.mensagem,"error");});}
+// -------- FUNÇÕES IA --------
+function iaChat(){ iaRequest("/ia/chat"); }
+function iaGerar(){ iaRequest("/ia/gerar"); }
+function iaExplicar(){ iaRequest("/ia/explicar"); }
+function iaCorrigir(){ iaRequest("/ia/corrigir"); }
 
-function abrirIA(){let msg=prompt("Pergunte algo à IA:");if(!msg)return;fetch("/ia/chat",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:"default",mensagem:msg})}).then(res=>res.json()).then(d=>{if(d.status==="ok")logTerminal("🤖 "+d.data,"debug");else logTerminal(d.mensagem,"error");});}
-
-function gerarCodigoIA(){let pedido=prompt("Digite o que quer gerar em LogicStart:");if(!pedido)return;fetch("/ia/gerar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id:"default",pedido:pedido})}).then(res=>res.json()).then(d=>{if(d.status==="ok")logTerminal("🧠 "+d.data,"debug");else logTerminal(d.mensagem,"error");});}
-
-/* ===== Inicialização ===== */
-function carregarArquivos(){fetch("/files?user_id=default").then(res=>res.json()).then(d=>{if(d.status==="ok"){d.data.forEach(f=>arquivos[f.nome]=f.codigo);if(Object.keys(arquivos).length>0){arquivoAtivo=Object.keys(arquivos)[0];abrirArquivo(arquivoAtivo);}atualizarAbas();atualizarListaArquivos();}});}
-document.addEventListener("DOMContentLoaded",()=>{carregarArquivos();});
+function iaRequest(url){
+    const prompt = document.getElementById("ia-prompt").value;
+    fetch(url, {
+        method:"POST",
+        headers:{"Content-Type":"application/json"},
+        body:JSON.stringify({mensagem: prompt, codigo: editor.getValue(), user_id:"default", pedido: prompt})
+    })
+    .then(r=>r.json()).then(d=>{
+        document.getElementById("ia-resposta").textContent = d.status==="ok" ? d.data : "Erro IA";
+    });
+}
 </script>
 
 </body>
