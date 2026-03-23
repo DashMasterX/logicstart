@@ -3,124 +3,140 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite - Login</title>
+<title>LogicStart Elite - Login / Registrar</title>
 <style>
-    /* ===== Reset básico ===== */
-    * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', sans-serif; }
-    body { height: 100vh; display: flex; justify-content: center; align-items: center; background: linear-gradient(135deg,#0d0d0d,#1a1a1a); color: #fff; }
+/* ===== Corpo ===== */
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
+    color: #fff;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+}
 
-    /* ===== Caixa de login ===== */
-    .login-box {
-        background: #202020;
-        padding: 40px;
-        border-radius: 16px;
-        width: 360px;
-        text-align: center;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-        animation: fadeIn 0.6s ease;
-    }
+/* ===== Caixa Login ===== */
+.box {
+    background: #202020;
+    padding: 40px;
+    border-radius: 16px;
+    width: 360px;
+    text-align: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
+    animation: fadeIn 0.6s ease;
+}
 
-    @keyframes fadeIn { from { opacity:0; transform: translateY(15px);} to { opacity:1; transform: translateY(0);} }
+/* ===== Animação ===== */
+@keyframes fadeIn {
+    from {opacity: 0; transform: translateY(15px);}
+    to {opacity: 1; transform: translateY(0);}
+}
 
-    h1 { font-size: 24px; margin-bottom: 10px; }
-    p.subtitle { font-size: 14px; color: #aaa; margin-bottom: 25px; }
+/* ===== Títulos ===== */
+h1 { font-size: 26px; margin-bottom: 10px; }
+p.subtitle { font-size: 14px; color: #aaa; margin-bottom: 25px; }
 
-    .input-field {
-        width: 100%;
-        padding: 12px;
-        margin: 10px 0;
-        border-radius: 8px;
-        border: 1px solid #444;
-        background: #121212;
-        color: #fff;
-        font-size: 15px;
-        transition: border 0.2s;
-    }
-    .input-field:focus { outline: none; border-color: #3a78d7; }
+/* ===== Inputs ===== */
+.input-field {
+    width: 100%;
+    padding: 12px;
+    margin: 10px 0;
+    border-radius: 8px;
+    border: 1px solid #444;
+    background: #121212;
+    color: #fff;
+    font-size: 15px;
+    transition: border 0.2s;
+}
+.input-field:focus { outline: none; border-color: #3a78d7; }
 
-    .btn {
-        width: 100%;
-        padding: 12px;
-        border: none;
-        border-radius: 8px;
-        cursor: pointer;
-        font-size: 15px;
-        margin-top: 10px;
-        transition: background 0.2s, color 0.2s;
-    }
+/* ===== Botões ===== */
+.btn {
+    width: 100%;
+    padding: 12px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 15px;
+    margin-top: 10px;
+    transition: background 0.2s,color 0.2s;
+}
+.btn-primary { background: #3a78d7; color: #fff; }
+.btn-primary:hover { background: #2b5ea0; }
+.btn-google { background: #fff; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; }
+.btn-google:hover { background: #ddd; }
+.btn-guest { background: transparent; color: #aaa; border: 1px solid #444; }
+.btn-guest:hover { background: #2a2a2a; }
 
-    .btn-primary { background: #3a78d7; color: #fff; }
-    .btn-primary:hover { background: #2b5ea0; }
+/* ===== Link ===== */
+.link { font-size: 13px; color: #3a78d7; cursor: pointer; margin-top: 10px; display: inline-block; }
 
-    .btn-google {
-        background: #fff;
-        color: #000;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        gap: 10px;
-        font-weight: bold;
-    }
-    .btn-google:hover { background: #ddd; }
-
-    .btn-guest {
-        background: transparent;
-        color: #aaa;
-        border: 1px solid #444;
-    }
-    .btn-guest:hover { background: #2a2a2a; }
-
-    .loader { display: none; margin-top: 10px; font-size: 13px; color: #aaa; }
-    .error { margin-top: 10px; color: #ff5555; font-size: 13px; }
-
+/* ===== Feedback ===== */
+.loader { display: none; margin-top: 10px; font-size: 13px; color: #aaa; }
+.error { margin-top: 10px; color: #ff5555; font-size: 13px; text-align: left; }
 </style>
 </head>
 <body>
 
-<div class="login-box">
+<div class="box" id="loginBox">
     <h1>LogicStart Elite</h1>
-    <p class="subtitle">Entre para o seu ambiente de desenvolvimento supremo</p>
+    <p class="subtitle" id="boxSubtitle">Entre na sua conta</p>
 
     <input type="email" id="email" placeholder="Email" class="input-field">
     <input type="password" id="senha" placeholder="Senha" class="input-field">
 
-    <button class="btn btn-primary" onclick="loginEmail()">Entrar</button>
+    <button class="btn btn-primary" id="mainBtn" onclick="loginEmail()">Entrar</button>
     <button class="btn btn-google" onclick="loginGoogle()">🔵 Entrar com Google</button>
     <button class="btn btn-guest" onclick="entrarSemLogin()">Entrar como Guest</button>
 
     <div class="loader" id="loader">Carregando...</div>
     <div class="error" id="error"></div>
+    <div class="link" id="toggleLink" onclick="toggleMode()">Criar uma conta</div>
 </div>
 
 <script>
-    function setLoading(state){ document.getElementById("loader").style.display = state ? "block" : "none"; }
-    function setError(msg){ document.getElementById("error").textContent = msg || ""; }
+let isRegister = false;
 
-    function loginEmail(){
-        const email = document.getElementById("email").value;
-        const senha = document.getElementById("senha").value;
+function setLoading(state){ document.getElementById("loader").style.display = state ? "block" : "none"; }
+function setError(msg){ document.getElementById("error").textContent = msg || ""; }
 
-        if(!email || !senha){ setError("Preencha todos os campos."); return; }
+function toggleMode(){
+    isRegister = !isRegister;
+    document.getElementById("boxSubtitle").textContent = isRegister ? "Crie sua nova conta" : "Entre na sua conta";
+    document.getElementById("mainBtn").textContent = isRegister ? "Registrar" : "Entrar";
+    document.getElementById("toggleLink").textContent = isRegister ? "Já tem uma conta? Entrar" : "Criar uma conta";
+    setError("");
+}
 
-        setError(""); setLoading(true);
+function loginEmail(){
+    const email = document.getElementById("email").value.trim();
+    const senha = document.getElementById("senha").value.trim();
 
-        fetch("/login/email", {
-            method: "POST",
-            headers: {"Content-Type": "application/json"},
-            body: JSON.stringify({email, senha})
-        })
-        .then(res => res.json())
-        .then(data => {
-            setLoading(false);
-            if(data.success){ window.location.href = "/ide"; }
-            else{ setError(data.error || "Erro ao logar"); }
-        })
-        .catch(()=>{ setLoading(false); setError("Erro ao conectar com o servidor"); });
-    }
+    if(!email || !senha){ setError("Preencha todos os campos."); return; }
 
-    function loginGoogle(){ window.location.href = "/login/google"; }
-    function entrarSemLogin(){ window.location.href = "/login/guest"; }
+    setError(""); setLoading(true);
+
+    const url = isRegister ? "/register" : "/login/email";
+
+    fetch(url, {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({email, senha})
+    })
+    .then(res => res.json())
+    .then(data => {
+        setLoading(false);
+        if(data.success){ window.location.href = "/ide"; }
+        else{ setError(data.error || "Erro ao processar"); }
+    })
+    .catch(()=>{ setLoading(false); setError("Erro ao conectar com o servidor"); });
+}
+
+function loginGoogle(){ window.location.href="/login/google"; }
+function entrarSemLogin(){ window.location.href="/login/guest"; }
+
 </script>
-
 </body>
 </html>
