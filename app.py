@@ -124,7 +124,7 @@ def logout():
     return redirect("/")
 
 # IDE (SUA PÁGINA ide.html)
-@app.route("/ide")
+@app.route("/ide.html")
 @login_required
 def ide():
     return render_template("ide.html", user=user())
