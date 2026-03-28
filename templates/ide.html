@@ -3,66 +3,189 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite IDE Multiplataforma</title>
+<title>LogicStart VSCode Mobile</title>
 
-<!-- CodeMirror 5 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/theme/dracula.css">
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/addon/hint/show-hint.css">
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/mode/python/python.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@5.65.14/addon/hint/show-hint.js"></script>
+<!-- CodeMirror 6 -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/javascript/javascript.js"></script>
 
 <style>
 :root{
   --bg:#0f0f1a; --bg2:#1a1a2e; --bg3:#23233a;
   --primary:#6e6ef8; --text:#f1f1f1;
-  --success:#4caf50; --error:#ff5555; --info:#00bcd4;
+  --success:#4caf50; --error:#ff5c5c; --info:#00bcd4;
 }
-body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;}
-header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg2);border-bottom:2px solid var(--primary);}
+
+*{box-sizing:border-box;}
+
+body{
+  margin:0;
+  font-family:'Segoe UI',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  display:flex;
+  flex-direction:column;
+  height:100vh;
+  overflow:hidden;
+}
+
+/* ===== HEADER ===== */
+header{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  padding:10px;
+  background:var(--bg2);
+  border-bottom:2px solid var(--primary);
+}
 header h1{margin:0;font-size:18px;}
-header .btn{background:var(--primary);border:none;padding:8px;color:white;border-radius:6px;cursor:pointer;margin-left:5px;}
-header .btn:hover{opacity:0.85;}
-.main{flex:1;display:flex;overflow:hidden;}
-.sidebar{width:220px;background:var(--bg2);border-right:2px solid var(--primary);overflow-y:auto;padding:10px;}
-.file{padding:8px;margin-bottom:5px;border-radius:6px;background:var(--bg3);cursor:pointer;user-select:none;}
+header .btn{
+  background:var(--primary);
+  border:none;
+  padding:8px;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+  margin-left:5px;
+  font-size:14px;
+}
+
+/* ===== MAIN ===== */
+.main{
+  flex:1;
+  display:flex;
+  overflow:hidden;
+  position:relative;
+}
+
+/* ===== SIDEBAR ===== */
+.sidebar{
+  width:220px;
+  background:var(--bg2);
+  border-right:2px solid var(--primary);
+  overflow-y:auto;
+  padding:10px;
+  transition:transform 0.3s ease;
+}
+.sidebar.hide{
+  transform:translateX(-100%);
+}
+.file{
+  padding:10px;
+  margin-bottom:5px;
+  border-radius:6px;
+  background:var(--bg3);
+  cursor:pointer;
+  font-size:14px;
+}
 .file.active{background:var(--primary);}
-.editor-container{flex:2;display:flex;flex-direction:column;position:relative;}
-.tabs{display:flex;background:var(--bg3);overflow-x:auto;border-bottom:2px solid var(--primary);}
-.tab{padding:10px;cursor:pointer;white-space:nowrap;user-select:none;}
+
+/* ===== EDITOR ===== */
+.editor-container{
+  flex:2;
+  display:flex;
+  flex-direction:column;
+}
+.tabs{
+  display:flex;
+  background:var(--bg3);
+  overflow-x:auto;
+  border-bottom:2px solid var(--primary);
+}
+.tab{
+  padding:10px;
+  cursor:pointer;
+  white-space:nowrap;
+}
 .tab.active{background:var(--primary);}
 .tab.modified::after{content:" ●";color:#ff9800;}
-.CodeMirror{flex:1;height:100%;border-radius:6px;}
-.terminal{height:180px;background:#111;padding:10px;overflow:auto;font-family:monospace;margin-top:5px;border-radius:6px;}
-.success{color:var(--success);} .error{color:var(--error);} .info{color:var(--info);}
-.ai-panel{width:300px;background:var(--bg2);border-left:2px solid var(--primary);display:flex;flex-direction:column;}
-.chat{flex:1;overflow:auto;padding:10px;}
+#editor{flex:1;}
+
+/* ===== TERMINAL ===== */
+.terminal{
+  height:150px;
+  background:#111;
+  padding:10px;
+  overflow:auto;
+  font-family:monospace;
+}
+.success{color:var(--success);} 
+.error{color:var(--error);} 
+.info{color:var(--info);}
+
+/* ===== IA PANEL ===== */
+.ai-panel{
+  width:300px;
+  background:var(--bg2);
+  border-left:2px solid var(--primary);
+  display:flex;
+  flex-direction:column;
+  transition:transform 0.3s ease;
+}
+.ai-panel.hide{transform:translateX(100%);}
+.chat{
+  flex:1;
+  overflow:auto;
+  padding:10px;
+}
 .msg{margin-bottom:10px;}
-.user{color:#8be9fd;} .bot{color:#50fa7b;}
-textarea{margin:10px;background:var(--bg3);color:white;border:none;padding:8px;border-radius:5px;width:90%;font-family:monospace;}
-.ai-panel button{margin:5px;background:var(--primary);color:white;border:none;padding:6px 10px;border-radius:5px;cursor:pointer;}
+.user{color:#8be9fd;} 
+.bot{color:#50fa7b;}
+textarea{
+  margin:10px;
+  background:var(--bg3);
+  color:white;
+  border:none;
+  padding:8px;
+  border-radius:5px;
+  width:90%;
+  font-family:monospace;
+}
+.ai-panel button{
+  margin:5px;
+  background:var(--primary);
+  color:white;
+  border:none;
+  padding:6px 10px;
+  border-radius:5px;
+  cursor:pointer;
+}
 .ai-panel button:hover{opacity:0.85;}
-.status{height:25px;background:var(--bg3);display:flex;justify-content:space-between;padding:5px;font-size:12px;}
-.toggle-theme{background:#fff;color:#000;}
-@media(max-width:1000px){.main{flex-direction:column;}.sidebar,.ai-panel{width:100%;height:120px;display:flex;overflow-x:auto;}.editor-container{flex:1;}}
+
+/* ===== STATUS ===== */
+.status{
+  height:25px;
+  background:var(--bg3);
+  display:flex;
+  justify-content:space-between;
+  padding:5px;
+  font-size:12px;
+}
+
+/* ===== MOBILE ===== */
+@media(max-width:768px){
+  .sidebar{position:absolute; z-index:10; height:100%; top:0; left:0;}
+  .ai-panel{position:absolute; z-index:10; top:0; right:0; height:100%;}
+}
 </style>
 </head>
 <body>
 
 <header>
-<h1>🚀 LogicStart Elite IDE</h1>
-<div>
-  <button class="btn" onclick="novoArquivo()">📄 Novo</button>
-  <button class="btn" onclick="salvar()">💾 Salvar</button>
-  <button class="btn" onclick="executar()">▶ Executar</button>
-  <button class="btn" onclick="logout()">🔒 Logout</button>
-  <button class="btn toggle-theme" onclick="toggleTheme()">🌗 Tema</button>
-</div>
+  <h1>🚀 LogicStart Mobile IDE</h1>
+  <div>
+    <button class="btn" onclick="toggleSidebar()">📂</button>
+    <button class="btn" onclick="novoArquivo()">📄</button>
+    <button class="btn" onclick="salvar()">💾</button>
+    <button class="btn" onclick="executar()">▶</button>
+    <button class="btn" onclick="toggleAI()">🤖</button>
+    <button class="btn" onclick="logout()">🔒</button>
+  </div>
 </header>
 
 <div class="main">
-  <div class="sidebar" id="files" ondragover="allowDrop(event)" ondrop="dropFile(event)"></div>
+  <div class="sidebar" id="files"></div>
 
   <div class="editor-container">
     <div class="tabs" id="tabs"></div>
@@ -70,7 +193,7 @@ textarea{margin:10px;background:var(--bg3);color:white;border:none;padding:8px;b
     <div class="terminal" id="terminal"></div>
   </div>
 
-  <div class="ai-panel">
+  <div class="ai-panel" id="aiPanel">
     <div class="chat" id="chat"></div>
     <textarea id="ia-prompt" placeholder="Pergunte algo à IA ou peça código..."></textarea>
     <button onclick="iaChat()">💬 Chat</button>
@@ -81,59 +204,5 @@ textarea{margin:10px;background:var(--bg3);color:white;border:none;padding:8px;b
 </div>
 
 <div class="status">
-<span id="status">Pronto</span><span>LogicStart</span>
+  <span id="status">Pronto</span><span>LogicStart</span>
 </div>
-
-<script>
-const user_id="default";
-let editor = CodeMirror.fromTextArea(document.getElementById("editor"),{
-  mode:"python", theme:"dracula", lineNumbers:true, autoCloseBrackets:true, matchBrackets:true, indentUnit:4, tabSize:4, extraKeys: {"Ctrl-Space":"autocomplete"}
-});
-let arquivos={}, atual="main", modificados={}, chatHist=[];
-
-// ---------- STATUS ----------
-function status(msg){document.getElementById("status").innerText=msg;}
-function log(msg,type="info"){let t=document.getElementById("terminal"); let d=document.createElement("div"); d.className=type; d.innerText=msg; t.appendChild(d); t.scrollTop=t.scrollHeight;}
-
-// ---------- FILES ----------
-async function carregar(){ let r=await fetch(`/files?user_id=${user_id}`); let d=await r.json(); arquivos={}; d.data.forEach(f=>arquivos[f.nome]=f.codigo); if(!arquivos["main"]) arquivos["main"]=""; abrir("main"); render();}
-function render(){ let f=document.getElementById("files"); let t=document.getElementById("tabs"); f.innerHTML=""; t.innerHTML=""; Object.keys(arquivos).forEach(n=>{ let el=document.createElement("div"); el.className="file "+(n===atual?"active":""); el.innerText=n; el.onclick=()=>abrir(n); f.appendChild(el); let tab=document.createElement("div"); tab.className="tab "+(n===atual?"active":"")+(modificados[n]?" modified":""); tab.innerText=n; tab.onclick=()=>abrir(n); t.appendChild(tab);});}
-function abrir(n){atual=n; editor.setValue(arquivos[n]); render();}
-function novoArquivo(){ let n=prompt("Nome do arquivo:"); if(!n)return; arquivos[n]=""; abrir(n);}
-
-// ---------- Drag & Drop ----------
-function allowDrop(ev){ev.preventDefault();}
-function dropFile(ev){ ev.preventDefault(); let file=ev.dataTransfer.files[0]; if(!file)return; let reader=new FileReader(); reader.onload=e=>{ arquivos[file.name]=e.target.result; abrir(file.name); }; reader.readAsText(file);}
-
-// ---------- AutoSave ----------
-editor.on("change",()=>{ modificados[atual]=true; arquivos[atual]=editor.getValue(); render(); autoSave(); });
-let timeout;
-function autoSave(){ clearTimeout(timeout); timeout=setTimeout(()=>salvar(),2000); }
-async function salvar(){ status("Salvando..."); await fetch("/files",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id,nome:atual,codigo:editor.getValue()})}); modificados[atual]=false; render(); status("Salvo");}
-
-// ---------- Executar ----------
-async function executar(){ status("Executando..."); let r=await fetch("/executar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({codigo:editor.getValue(),user_id})}); let d=await r.json(); log(d.data?.saida||d.mensagem,d.status==="ok"?"success":"error"); status("Finalizado");}
-
-// ---------- IA ----------
-function addMsg(txt,cls){ let c=document.getElementById("chat"); let d=document.createElement("div"); d.className="msg "+cls; d.innerText=txt; c.appendChild(d); c.scrollTop=c.scrollHeight; }
-async function iaChat(){ iaRequest("/ia/chat"); }
-async function iaGerar(){ iaRequest("/ia/gerar"); }
-async function iaExplicar(){ iaRequest("/ia/explicar"); }
-async function iaCorrigir(){ iaRequest("/ia/corrigir"); }
-async function iaRequest(url){ const prompt=document.getElementById("ia-prompt").value; if(!prompt)return; chatHist.push({role:"user",content:prompt}); addMsg("Você: "+prompt,"user"); let r=await fetch(url,{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({user_id,pedido:prompt,codigo:editor.getValue()})}); let d=await r.json(); chatHist.push({role:"bot",content:d.data}); addMsg("IA: "+d.data,"bot");}
-
-// ---------- Theme Toggle ----------
-let dark=true;
-function toggleTheme(){ dark=!dark; document.body.style.background=dark?"var(--bg)":"#f5f5f5"; document.body.style.color=dark?"var(--text)":"#000"; document.querySelectorAll(".CodeMirror").forEach(cm=>cm.CodeMirror.setOption("theme",dark?"dracula":"default"));}
-
-// ---------- Logout ----------
-function logout(){ window.location.href="/logout";}
-
-// ---------- Shortcuts ----------
-document.addEventListener("keydown",(e)=>{ if(e.ctrlKey && e.key==="s"){e.preventDefault(); salvar();} if(e.ctrlKey && e.key==="Enter"){executar();}});
-
-// ---------- Init ----------
-carregar();
-</script>
-</body>
-</html>
