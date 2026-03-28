@@ -128,13 +128,19 @@ function loginEmail(){
     .then(res => res.json())
     .then(data => {
         setLoading(false);
-        if(data.success){ window.location.href = "/ide"; }
+        if(data.success){ 
+            // Redireciona para IDE
+            window.location.href = "/ide"; 
+        }
         else{ setError(data.error || "Erro ao processar"); }
     })
     .catch(()=>{ setLoading(false); setError("Erro ao conectar com o servidor"); });
 }
 
+// Google (somente botão visual)
 function loginGoogle(){ window.location.href="/login/google"; }
+
+// Guest
 function entrarSemLogin(){ window.location.href="/login/guest"; }
 
 </script>
