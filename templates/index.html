@@ -1,108 +1,174 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart VSCode Mobile</title>
+<title>LogicStart IDE</title><link rel="stylesheet" href="/static/css/main.css"><style>
 
-<!-- CodeMirror 6 -->
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/theme/monokai.css">
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/lib/codemirror.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/mode/python/python.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.js"></script>
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/codemirror@6.0.1/addon/hint/show-hint.css">
-
-<style>
-:root{
-  --bg:#0f0f0f; --bg2:#1a1a2e; --bg3:#23233a;
-  --primary:#6e6ef8; --text:#f1f1f1;
-  --success:#4caf50; --error:#ff5c5c; --info:#00bcd4;
+.ide{
+    display:flex;
+    flex-direction:column;
+    height:100vh;
 }
-*{box-sizing:border-box;}
-body{margin:0;font-family:'Segoe UI',sans-serif;background:var(--bg);color:var(--text);display:flex;flex-direction:column;height:100vh;}
 
-/* Header */
-header{display:flex;justify-content:space-between;align-items:center;padding:10px;background:var(--bg2);border-bottom:2px solid var(--primary);}
-header h1{margin:0;font-size:18px;}
-header .btn{background:var(--primary);border:none;padding:8px;color:white;border-radius:6px;cursor:pointer;margin-left:5px;}
-header .btn:hover{opacity:0.85;}
+.topbar{
+    height:56px;
+    background:var(--bg-secondary);
+    border-bottom:1px solid var(--border);
 
-/* Main Layout */
-.main{flex:1;display:flex;overflow:hidden;transition:all 0.3s;}
-.sidebar{width:220px;background:var(--bg2);border-right:2px solid var(--primary);overflow-y:auto;padding:10px;transition:all 0.3s;}
-.sidebar.hidden{transform:translateX(-100%);}
-.file{padding:8px;margin-bottom:5px;border-radius:6px;background:var(--bg3);cursor:pointer;}
-.file.active{background:var(--primary);}
-.editor-container{flex:2;display:flex;flex-direction:column;position:relative;}
-.tabs{display:flex;background:var(--bg3);overflow-x:auto;border-bottom:2px solid var(--primary);}
-.tab{padding:10px;cursor:pointer;white-space:nowrap;}
-.tab.active{background:var(--primary);}
-.tab.modified::after{content:" ●";color:#ff9800;}
-#editor{flex:1;}
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
 
-/* Terminal */
-.terminal{height:150px;background:#111;padding:10px;overflow:auto;font-family:monospace;}
-.success{color:var(--success);}
-.error{color:var(--error);}
-.info{color:var(--info);}
+    padding:0 12px;
+}
 
-/* IA Panel */
-.ai-panel{width:300px;background:var(--bg2);border-left:2px solid var(--primary);display:flex;flex-direction:column;transition:all 0.3s;}
-.ai-panel.hidden{transform:translateX(100%);}
-.chat{flex:1;overflow:auto;padding:10px;}
-.msg{margin-bottom:10px;}
-.user{color:#8be9fd;}
-.bot{color:#50fa7b;}
-textarea{margin:10px;background:var(--bg3);color:white;border:none;padding:8px;border-radius:5px;width:90%;font-family:monospace;}
-.ai-panel button{margin:5px;background:var(--primary);color:white;border:none;padding:6px 10px;border-radius:5px;cursor:pointer;}
-.ai-panel button:hover{opacity:0.85;}
+.workspace{
+    flex:1;
+    display:flex;
+    overflow:hidden;
+}
 
-/* Status bar */
-.status{height:25px;background:var(--bg3);display:flex;justify-content:space-between;padding:5px;font-size:12px;}
+.sidebar{
+    width:260px;
+    background:var(--bg-secondary);
+    border-right:1px solid var(--border);
+    overflow:auto;
+}
 
-/* Mobile responsiveness */
+.sidebar-header{
+    padding:16px;
+    font-weight:700;
+}
+
+.file{
+    padding:12px 16px;
+    cursor:pointer;
+}
+
+.file:hover{
+    background:var(--bg-tertiary);
+}
+
+.editor-area{
+    flex:1;
+    display:flex;
+    flex-direction:column;
+}
+
+.tabs{
+    height:42px;
+    background:var(--bg-tertiary);
+    border-bottom:1px solid var(--border);
+}
+
+.editor{
+    flex:1;
+    padding:20px;
+    background:#1e1e1e;
+    font-family:Consolas,monospace;
+}
+
+.terminal{
+    height:180px;
+    background:#111;
+    border-top:1px solid var(--border);
+    padding:12px;
+}
+
+.ai-panel{
+    width:340px;
+    background:var(--bg-secondary);
+    border-left:1px solid var(--border);
+}
+
+.ai-header{
+    padding:16px;
+    border-bottom:1px solid var(--border);
+}
+
+.statusbar{
+    height:26px;
+    background:var(--accent);
+
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+
+    padding:0 10px;
+    color:white;
+    font-size:12px;
+}
+
 @media(max-width:900px){
-  .sidebar{position:absolute;z-index:10;top:50px;left:0;height:calc(100% - 50px);}
-  .ai-panel{position:absolute;top:50px;right:0;height:calc(100% - 50px);}
-}
-</style>
-</head>
-<body>
 
-<header>
-<h1>🚀 LogicStart Mobile IDE</h1>
-<div>
-  <button class="btn" onclick="toggleSidebar()">📂</button>
-  <button class="btn" onclick="toggleAI()">🤖</button>
-  <button class="btn" onclick="novoArquivo()">📄</button>
-  <button class="btn" onclick="salvar()">💾</button>
-  <button class="btn" onclick="executar()">▶</button>
-  <button class="btn" onclick="logout()">🔒</button>
-</div>
+    .sidebar{
+        display:none;
+    }
+
+    .ai-panel{
+        display:none;
+    }
+
+}
+
+</style></head>
+<body><div class="ide"><header class="topbar">
+
+    <div>
+        🚀 LogicStart IDE
+    </div>
+
+    <div>
+        Arquivo • Executar • IA
+    </div>
+
 </header>
 
-<div class="main">
-  <!-- Sidebar de arquivos -->
-  <div class="sidebar" id="files"></div>
+<div class="workspace">
 
-  <!-- Editor e tabs -->
-  <div class="editor-container">
-    <div class="tabs" id="tabs"></div>
-    <textarea id="editor">// Escreva seu código LogicStart aqui</textarea>
-    <div class="terminal" id="terminal"></div>
-  </div>
+    <aside class="sidebar">
 
-  <!-- Painel IA -->
-  <div class="ai-panel" id="ai-panel">
-    <div class="chat" id="chat"></div>
-    <textarea id="ia-prompt" placeholder="Pergunte algo à IA ou peça código..."></textarea>
-    <button onclick="iaChat()">💬 Chat</button>
-    <button onclick="iaGerar()">📝 Gerar Código</button>
-    <button onclick="iaExplicar()">📖 Explicar Código</button>
-    <button onclick="iaCorrigir()">🛠 Corrigir Código</button>
-  </div>
+        <div class="sidebar-header">
+            Arquivos
+        </div>
+
+        <div class="file">main.ls</div>
+        <div class="file">teste.ls</div>
+
+    </aside>
+
+    <main class="editor-area">
+
+        <div class="tabs">
+            main.ls
+        </div>
+
+        <div class="editor">
+            // Código LogicStart
+        </div>
+
+        <div class="terminal">
+            Terminal LogicStart
+        </div>
+
+    </main>
+
+    <aside class="ai-panel">
+
+        <div class="ai-header">
+            LogicStart AI
+        </div>
+
+    </aside>
+
 </div>
 
-<div class="status">
-<span id="status">Pronto</span><span>LogicStart</span>
-</div>
+<footer class="statusbar">
+
+    <span>Pronto</span>
+    <span>LogicStart Elite</span>
+
+</footer>
+
+</div></body>
+</html>
