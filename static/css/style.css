@@ -1,16 +1,55 @@
+/* ==========================================================
+LogicStart Elite UI v2
+Tema Profissional inspirado em VS Code + Cursor
+========================================================== */
+
 :root{
---bg:#1e1e1e;
---bg-secondary:#252526;
---bg-tertiary:#2d2d30;
---accent:#0078d4;
---accent-hover:#106ebe;
---text:#cccccc;
---text-muted:#8c8c8c;
---success:#4ec9b0;
---error:#f14c4c;
---border:#3c3c3c;
---shadow:0 10px 30px rgba(0,0,0,.35);
+
+/* Cores principais */
+--bg:#0d1117;
+--bg-secondary:#161b22;
+--bg-tertiary:#21262d;
+
+/* Painéis */
+--panel:#161b22;
+--panel-hover:#1f2630;
+
+/* Texto */
+--text:#f0f6fc;
+--text-secondary:#8b949e;
+--text-muted:#6e7681;
+
+/* Accent */
+--primary:#2383ff;
+--primary-hover:#1a6de0;
+
+/* Status */
+--success:#3fb950;
+--warning:#d29922;
+--error:#f85149;
+--info:#58a6ff;
+
+/* Bordas */
+--border:#30363d;
+
+/* Sombras */
+--shadow-sm:0 2px 8px rgba(0,0,0,.15);
+--shadow-md:0 6px 18px rgba(0,0,0,.25);
+--shadow-lg:0 10px 30px rgba(0,0,0,.35);
+
+/* Radius */
+--radius-sm:8px;
+--radius-md:12px;
+--radius-lg:16px;
+
+/* Animações */
+--transition:0.25s ease;
+
 }
+
+/* ==========================================================
+RESET
+========================================================== */
 
 *{
 margin:0;
@@ -18,47 +57,120 @@ padding:0;
 box-sizing:border-box;
 }
 
-html,
-body{
+html{
 height:100%;
 }
 
 body{
-font-family:Inter,Segoe UI,sans-serif;
+height:100%;
 background:var(--bg);
 color:var(--text);
+font-family:
+Inter,
+Segoe UI,
+Roboto,
+sans-serif;
+
+overflow:hidden;
+-webkit-font-smoothing:antialiased;
+
 }
 
-button{
-cursor:pointer;
-border:none;
-transition:.2s;
+/* ==========================================================
+SCROLLBAR
+========================================================== */
+
+::-webkit-scrollbar{
+width:8px;
+height:8px;
 }
 
-input,
-textarea{
-outline:none;
-border:none;
-font-family:inherit;
-}
-
-.card{
+::-webkit-scrollbar-track{
 background:var(--bg-secondary);
-border:1px solid var(--border);
-border-radius:14px;
-box-shadow:var(--shadow);
 }
+
+::-webkit-scrollbar-thumb{
+background:var(--bg-tertiary);
+border-radius:999px;
+}
+
+::-webkit-scrollbar-thumb:hover{
+background:#3a4149;
+}
+
+/* ==========================================================
+TOPO
+========================================================== */
+
+.topbar{
+height:58px;
+
+display:flex;
+align-items:center;
+justify-content:space-between;
+
+padding:0 16px;
+
+background:var(--panel);
+border-bottom:1px solid var(--border);
+
+backdrop-filter:blur(12px);
+
+}
+
+.logo{
+display:flex;
+align-items:center;
+gap:10px;
+
+font-weight:700;
+font-size:16px;
+
+}
+
+.logo-icon{
+color:var(--primary);
+}
+
+.topbar-actions{
+display:flex;
+align-items:center;
+gap:8px;
+}
+
+/* ==========================================================
+BOTÕES
+========================================================== */
 
 .btn{
-background:var(--accent);
-color:white;
-padding:10px 16px;
-border-radius:8px;
+border:none;
+
+display:flex;
+align-items:center;
+justify-content:center;
+
+gap:8px;
+
+padding:10px 14px;
+
+border-radius:10px;
+
 font-weight:600;
+font-size:14px;
+
+cursor:pointer;
+
+transition:var(--transition);
+
 }
 
-.btn:hover{
-background:var(--accent-hover);
+.btn-primary{
+background:var(--primary);
+color:white;
+}
+
+.btn-primary:hover{
+background:var(--primary-hover);
 }
 
 .btn-secondary{
@@ -67,21 +179,420 @@ color:var(--text);
 }
 
 .btn-secondary:hover{
-filter:brightness(1.15);
+background:#313842;
 }
 
-.status-success{
+.btn-success{
+background:var(--success);
+color:white;
+}
+
+.btn-danger{
+background:var(--error);
+color:white;
+}
+
+/* ==========================================================
+WORKSPACE
+========================================================== */
+
+.workspace{
+height:calc(100vh - 84px);
+display:flex;
+}
+
+/* ==========================================================
+SIDEBAR
+========================================================== */
+
+.sidebar{
+width:260px;
+
+background:var(--panel);
+
+border-right:1px solid var(--border);
+
+display:flex;
+flex-direction:column;
+
+overflow:hidden;
+
+}
+
+.sidebar-header{
+padding:16px;
+font-weight:700;
+border-bottom:1px solid var(--border);
+}
+
+.files{
+flex:1;
+overflow:auto;
+}
+
+.file{
+padding:12px 16px;
+
+cursor:pointer;
+
+transition:var(--transition);
+
+border-left:3px solid transparent;
+
+}
+
+.file:hover{
+background:var(--panel-hover);
+}
+
+.file.active{
+background:rgba(35,131,255,.15);
+border-left-color:var(--primary);
+}
+
+/* ==========================================================
+EDITOR
+========================================================== */
+
+.editor-area{
+flex:1;
+
+display:flex;
+flex-direction:column;
+
+overflow:hidden;
+
+}
+
+.tabs{
+height:42px;
+
+display:flex;
+align-items:center;
+
+background:var(--bg-secondary);
+
+border-bottom:1px solid var(--border);
+
+overflow-x:auto;
+
+}
+
+.tab{
+height:100%;
+
+display:flex;
+align-items:center;
+
+padding:0 16px;
+
+cursor:pointer;
+
+color:var(--text-secondary);
+
+border-right:1px solid var(--border);
+
+transition:var(--transition);
+
+}
+
+.tab:hover{
+background:var(--panel-hover);
+}
+
+.tab.active{
+color:var(--text);
+background:var(--panel);
+}
+
+.editor{
+flex:1;
+
+background:#0d1117;
+
+padding:20px;
+
+overflow:auto;
+
+font-family:
+    Consolas,
+    JetBrains Mono,
+    monospace;
+
+font-size:14px;
+line-height:1.7;
+
+}
+
+/* ==========================================================
+TERMINAL
+========================================================== */
+
+.terminal{
+height:180px;
+
+background:#0a0f14;
+
+border-top:1px solid var(--border);
+
+overflow:auto;
+
+padding:16px;
+
+font-family:
+    JetBrains Mono,
+    Consolas,
+    monospace;
+
+font-size:13px;
+
+}
+
+.terminal-success{
 color:var(--success);
 }
 
-.status-error{
+.terminal-error{
 color:var(--error);
 }
 
-@media(max-width:768px){
+.terminal-info{
+color:var(--info);
+}
 
-body{
-    overflow:hidden;
+/* ==========================================================
+IA
+========================================================== */
+
+.ai-panel{
+width:340px;
+
+display:flex;
+flex-direction:column;
+
+background:var(--panel);
+
+border-left:1px solid var(--border);
+
+}
+
+.ai-header{
+padding:16px;
+
+font-weight:700;
+
+border-bottom:1px solid var(--border);
+
+}
+
+.chat{
+flex:1;
+
+overflow:auto;
+
+padding:16px;
+
+display:flex;
+flex-direction:column;
+
+gap:12px;
+
+}
+
+.message{
+padding:12px;
+
+border-radius:12px;
+
+max-width:90%;
+
+}
+
+.message.user{
+align-self:flex-end;
+
+background:rgba(35,131,255,.15);
+
+}
+
+.message.bot{
+align-self:flex-start;
+
+background:var(--bg-tertiary);
+
+}
+
+.ai-input{
+border-top:1px solid var(--border);
+
+padding:12px;
+
+display:flex;
+flex-direction:column;
+
+gap:10px;
+
+}
+
+.ai-input textarea{
+width:100%;
+min-height:90px;
+
+resize:none;
+
+border:none;
+
+outline:none;
+
+background:var(--bg-tertiary);
+
+color:var(--text);
+
+padding:12px;
+
+border-radius:12px;
+
+}
+
+/* ==========================================================
+LOGIN
+========================================================== */
+
+.login-page{
+min-height:100vh;
+
+display:flex;
+justify-content:center;
+align-items:center;
+
+padding:24px;
+
+}
+
+.login-card{
+width:100%;
+max-width:420px;
+
+background:var(--panel);
+
+border:1px solid var(--border);
+
+border-radius:20px;
+
+padding:32px;
+
+box-shadow:var(--shadow-lg);
+
+}
+
+.login-title{
+text-align:center;
+margin-bottom:24px;
+}
+
+.login-title h1{
+margin-bottom:8px;
+}
+
+.login-title p{
+color:var(--text-secondary);
+}
+
+.input-group{
+margin-bottom:16px;
+}
+
+.input-group label{
+display:block;
+margin-bottom:8px;
+
+color:var(--text-secondary);
+
+}
+
+.input-group input{
+width:100%;
+
+background:var(--bg);
+
+color:var(--text);
+
+border:1px solid var(--border);
+
+padding:14px;
+
+border-radius:12px;
+
+transition:var(--transition);
+
+}
+
+.input-group input:focus{
+border-color:var(--primary);
+}
+
+/* ==========================================================
+STATUS BAR
+========================================================== */
+
+.statusbar{
+height:26px;
+
+background:var(--primary);
+
+color:white;
+
+display:flex;
+align-items:center;
+justify-content:space-between;
+
+padding:0 12px;
+
+font-size:12px;
+
+}
+
+/* ==========================================================
+MOBILE
+========================================================== */
+
+@media(max-width:900px){
+
+.sidebar{
+    display:none;
+}
+
+.ai-panel{
+    display:none;
+}
+
+.topbar{
+    padding:0 10px;
+}
+
+.btn{
+    padding:8px 10px;
+    font-size:13px;
+}
+
+.terminal{
+    height:120px;
+}
+
+}
+
+@media(max-width:500px){
+
+.topbar{
+    height:52px;
+}
+
+.logo{
+    font-size:14px;
+}
+
+.login-card{
+    padding:24px;
 }
 
 }
