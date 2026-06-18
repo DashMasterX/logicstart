@@ -1,148 +1,89 @@
-<!DOCTYPE html>
-<html lang="pt-BR">
+<!DOCTYPE html><html lang="pt-BR">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>LogicStart Elite - Login / Registrar</title>
-<style>
-/* ===== Corpo ===== */
-body {
-    margin: 0;
-    font-family: 'Segoe UI', sans-serif;
-    background: linear-gradient(135deg, #0d0d0d, #1a1a1a);
-    color: #fff;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    height: 100vh;
+<title>LogicStart Elite</title><link rel="stylesheet" href="/static/css/main.css"><style>
+
+.login-page{
+    height:100vh;
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    padding:20px;
 }
 
-/* ===== Caixa Login ===== */
-.box {
-    background: #202020;
-    padding: 40px;
-    border-radius: 16px;
-    width: 360px;
-    text-align: center;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.6);
-    animation: fadeIn 0.6s ease;
+.login-box{
+    width:100%;
+    max-width:420px;
+    padding:32px;
 }
 
-/* ===== Animação ===== */
-@keyframes fadeIn {
-    from {opacity: 0; transform: translateY(15px);}
-    to {opacity: 1; transform: translateY(0);}
+.logo{
+    text-align:center;
+    margin-bottom:30px;
 }
 
-/* ===== Títulos ===== */
-h1 { font-size: 26px; margin-bottom: 10px; }
-p.subtitle { font-size: 14px; color: #aaa; margin-bottom: 25px; }
-
-/* ===== Inputs ===== */
-.input-field {
-    width: 100%;
-    padding: 12px;
-    margin: 10px 0;
-    border-radius: 8px;
-    border: 1px solid #444;
-    background: #121212;
-    color: #fff;
-    font-size: 15px;
-    transition: border 0.2s;
+.logo h1{
+    font-size:32px;
+    margin-bottom:10px;
 }
-.input-field:focus { outline: none; border-color: #3a78d7; }
 
-/* ===== Botões ===== */
-.btn {
-    width: 100%;
-    padding: 12px;
-    border: none;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-    margin-top: 10px;
-    transition: background 0.2s,color 0.2s;
+.logo p{
+    color:var(--text-muted);
 }
-.btn-primary { background: #3a78d7; color: #fff; }
-.btn-primary:hover { background: #2b5ea0; }
-.btn-google { background: #fff; color: #000; display: flex; align-items: center; justify-content: center; gap: 10px; font-weight: bold; }
-.btn-google:hover { background: #ddd; }
-.btn-guest { background: transparent; color: #aaa; border: 1px solid #444; }
-.btn-guest:hover { background: #2a2a2a; }
 
-/* ===== Link ===== */
-.link { font-size: 13px; color: #3a78d7; cursor: pointer; margin-top: 10px; display: inline-block; }
+.form-group{
+    margin-bottom:16px;
+}
 
-/* ===== Feedback ===== */
-.loader { display: none; margin-top: 10px; font-size: 13px; color: #aaa; }
-.error { margin-top: 10px; color: #ff5555; font-size: 13px; text-align: left; }
-</style>
-</head>
-<body>
+.form-group input{
+    width:100%;
+    background:var(--bg);
+    color:var(--text);
+    padding:14px;
+    border-radius:10px;
+    border:1px solid var(--border);
+}
 
-<div class="box" id="loginBox">
-    <h1>LogicStart Elite</h1>
-    <p class="subtitle" id="boxSubtitle">Entre na sua conta</p>
+.actions{
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+}
 
-    <input type="email" id="email" placeholder="Email" class="input-field">
-    <input type="password" id="senha" placeholder="Senha" class="input-field">
+.footer{
+    text-align:center;
+    margin-top:20px;
+    color:var(--text-muted);
+}
 
-    <button class="btn btn-primary" id="mainBtn" onclick="loginEmail()">Entrar</button>
-    <button class="btn btn-google" onclick="loginGoogle()">🔵 Entrar com Google</button>
-    <button class="btn btn-guest" onclick="entrarSemLogin()">Entrar como Guest</button>
+</style></head>
+<body><div class="login-page"><div class="login-box card">
 
-    <div class="loader" id="loader">Carregando...</div>
-    <div class="error" id="error"></div>
-    <div class="link" id="toggleLink" onclick="toggleMode()">Criar uma conta</div>
+    <div class="logo">
+        <h1>🚀 LogicStart</h1>
+        <p>Programação para todos</p>
+    </div>
+
+    <div class="form-group">
+        <input type="email" placeholder="Seu email">
+    </div>
+
+    <div class="form-group">
+        <input type="password" placeholder="Sua senha">
+    </div>
+
+    <div class="actions">
+        <button class="btn">Entrar</button>
+        <button class="btn-secondary">Entrar com Google</button>
+        <button class="btn-secondary">Modo Visitante</button>
+    </div>
+
+    <div class="footer">
+        Não possui conta? Criar conta
+    </div>
+
 </div>
 
-<script>
-let isRegister = false;
-
-function setLoading(state){ document.getElementById("loader").style.display = state ? "block" : "none"; }
-function setError(msg){ document.getElementById("error").textContent = msg || ""; }
-
-function toggleMode(){
-    isRegister = !isRegister;
-    document.getElementById("boxSubtitle").textContent = isRegister ? "Crie sua nova conta" : "Entre na sua conta";
-    document.getElementById("mainBtn").textContent = isRegister ? "Registrar" : "Entrar";
-    document.getElementById("toggleLink").textContent = isRegister ? "Já tem uma conta? Entrar" : "Criar uma conta";
-    setError("");
-}
-
-function loginEmail(){
-    const email = document.getElementById("email").value.trim();
-    const senha = document.getElementById("senha").value.trim();
-
-    if(!email || !senha){ setError("Preencha todos os campos."); return; }
-
-    setError(""); setLoading(true);
-
-    const url = isRegister ? "/register" : "/login/email";
-
-    fetch(url, {
-        method: "POST",
-        headers: {"Content-Type": "application/json"},
-        body: JSON.stringify({email, senha})
-    })
-    .then(res => res.json())
-    .then(data => {
-        setLoading(false);
-        if(data.success){ 
-            // Redireciona para IDE
-            window.location.href = "/ide"; 
-        }
-        else{ setError(data.error || "Erro ao processar"); }
-    })
-    .catch(()=>{ setLoading(false); setError("Erro ao conectar com o servidor"); });
-}
-
-// Google (somente botão visual)
-function loginGoogle(){ window.location.href="/login/google"; }
-
-// Guest
-function entrarSemLogin(){ window.location.href="/login/guest"; }
-
-</script>
-</body>
+</div></body>
 </html>
